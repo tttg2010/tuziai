@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>兔子AI 工作台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="model-rail" aria-label="模型列表">
+        <header class="brand">
+          <img class="brand-mark" src="./tuzi-ai-logo.png" alt="兔子AI logo" />
+          <div>
+            <h1>兔子AI</h1>
+            <p>AI 大模型聚合平台</p>
+          </div>
+        </header>
+
+        <nav class="top-modes" aria-label="模式">
+          <button class="mode active" data-kind="video">大模型</button>
+          <button class="mode">智能体</button>
+          <button class="mode">灵感广场</button>
+        </nav>
+
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-category="all">全部</button>
+          <button class="tab" data-category="chat">聊天</button>
+          <button class="tab" data-category="image">图片</button>
+          <button class="tab" data-category="video">视频</button>
+        </div>
+
+        <label class="search">
+          <span>⌕</span>
+          <input id="modelSearch" placeholder="搜索模型或功能..." />
+        </label>
+
+        <button id="healthToolButton" class="tool-card" type="button">
+          <span class="logo brand-system"><span>API</span></span>
+          <span>
+            <strong>功能模块检测</strong>
+            <small>按模型检查接口依赖</small>
+          </span>
+        </button>
+
+        <section id="modelList" class="model-list"></section>
+
+        <footer class="account-card">
+          <div class="avatar">仙</div>
+          <div>
+            <strong>奔跑的仙女座</strong>
+            <span id="connectionState">未连接</span>
+          </div>
+          <button id="refreshBilling">刷新</button>
+        </footer>
+      </aside>
+
+      <main class="generator-panel" aria-label="生成设置">
+        <section class="api-card">
+          <div>
+            <span>当前视频模型</span>
+            <h2 id="selectedModelTitle">veo_3_1-fast</h2>
+            <p id="selectedModelNote">veo 有效期仅6小时，请生成后尽快下载！</p>
+          </div>
+          <button id="openConfig">设置</button>
+        </section>
+
+        <form id="featureForm" class="form-stack">
+          <label>
+            <span id="promptLabel">提示词 <b>*</b></span>
+            <textarea id="prompt" required placeholder="描述你想生成的视频内容..."></textarea>
+          </label>
+
+          <section id="chatOptions" class="feature-options hidden">
+            <label>
+              <span>系统角色</span>
+              <textarea id="systemPrompt" placeholder="可选：设置模型回答风格、身份或约束..."></textarea>
+            </label>
+            <div class="field-grid">
+              <label>
+                <span>输出模式</span>
+                <select id="chatMode">
+                  <option value="normal">常规对话</option>
+                  <option value="creative">创意发散</option>
+                  <option value="precise">精确执行</option>
+                </select>
+              </label>
+              <label>
+                <span>上下文</span>
+                <select id="chatContext">
+                  <option value="single">单轮</option>
+                  <option value="multi">多轮</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <label id="referenceSection">
+            <span>参考图片 <small>可选，图生视频，支持多张</small></span>
+            <div class="drop-zone">
+              <input id="referenceFiles" type="file" accept="image/*,video/*" multiple />
+              <p>点击或拖拽上传</p>
+            </div>
+          </label>
+
+          <label id="extendSection">
+            <span>延长视频 <small>可延长至15秒，可选</small></span>
+            <input id="remixId" class="text-input" placeholder="可粘贴 remix_id，或拖拽右侧视频节点" />
+            <div id="extendTarget" class="drop-zone ghost">将右侧工作流视频节点拖拽到这里</div>
+          </label>
+
+          <section id="imageOptions" class="feature-options hidden">
+            <label>
+              <span>参考图 URL <small>一行一个公开图片链接，nano banana 接口使用 URL 数组</small></span>
+              <textarea id="imageUrls" placeholder="https://example.com/input-1.png&#10;https://example.com/input-2.png"></textarea>
+            </label>
+            <label>
+              <span>图片用途</span>
+              <select id="imageMode">
+                <option value="generate">文生图</option>
+                <option value="reference">参考图创作</option>
+                <option value="edit">局部改图</option>
+              </select>
+            </label>
+            <div class="field-grid">
+              <label>
+                <span>图片比例</span>
+                <select id="imageAspectRatio">
+                  <option value="16:9">16:9</option>
+                  <option value="9:16">9:16</option>
+                  <option value="1:1">1:1</option>
+                  <option value="4:3">4:3</option>
+                  <option value="3:4">3:4</option>
+                  <option value="21:9">21:9</option>
+                </select>
+              </label>
+              <label>
+                <span>清晰度</span>
+                <select id="imageSize">
+                  <option value="1K">1K</option>
+                  <option value="2K">2K</option>
+                  <option value="4K">4K</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <div id="videoControls" class="field-grid">
+            <label>
+              <span>视频尺寸</span>
+              <div class="segmented">
+                <button type="button" class="chip active" data-size="720x1280">16:9</button>
+                <button type="button" class="chip" data-size="1280x720">9:16</button>
+              </div>
+            </label>
+            <label>
+              <span>时长</span>
+              <select id="seconds">
+                <option value="8">8 秒</option>
+                <option value="10">10 秒</option>
+                <option value="15">15 秒</option>
+              </select>
+            </label>
+          </div>
+
+          <label id="watermarkSection" class="switch-row">
+            <input id="watermark" type="checkbox" />
+            <span>生成有水印版本</span>
+          </label>
+
+          <div class="action-bar">
+            <div class="stepper" aria-label="生成数量">
+              <button id="decreaseCount" type="button">-</button>
+              <strong id="generationCount">1</strong>
+              <button id="increaseCount" type="button">+</button>
+            </div>
+            <button class="primary" type="submit">
+              <span>▷</span>
+              <span id="submitLabel">开始生成</span>
+              <small id="priceHint">估算中</small>
+            </button>
+          </div>
+        </form>
+      </main>
+
+      <section class="canvas-workspace" aria-label="工作区">
+        <div id="gridCanvas" class="grid-canvas">
+          <div id="canvasContent" class="canvas-content">
+            <div class="notice">
+              <span>?</span>
+              检测到您未订阅存储服务，建议订阅后获得永久存储和视频图片加速服务
+              <button>去订阅</button>
+            </div>
+
+            <div class="floating-tags">
+              <button>剧本</button>
+              <button>人物</button>
+              <button>视频</button>
+            </div>
+
+            <section class="node source-node">
+              <header>
+                <b id="queueTitle">当前任务队列</b>
+                <span id="taskCount">0 个任务</span>
+              </header>
+              <div id="taskGrid" class="task-grid"></div>
+            </section>
+
+            <section class="node result-node">
+              <header>
+                <b id="resultTitle">生成结果</b>
+                <div class="node-actions">
+                  <button id="downloadVideos" type="button">视频下载</button>
+                  <button id="downloadImages" type="button">图片下载</button>
+                  <button id="clearDone" type="button">清空</button>
+                </div>
+              </header>
+              <div class="result-columns">
+                <section>
+                  <h3>视频</h3>
+                  <div id="videoResultGrid" class="result-grid"></div>
+                </section>
+                <section>
+                  <h3>图片</h3>
+                  <div id="imageResultGrid" class="result-grid"></div>
+                </section>
+                <section>
+                  <h3>聊天</h3>
+                  <div id="chatResultGrid" class="result-grid"></div>
+                </section>
+              </div>
+            </section>
+          </div>
+
+          <div class="tool-dock">
+            <button title="主页">⌂</button>
+            <button title="文件">□</button>
+            <button title="图片">▧</button>
+          </div>
+          <div id="zoomReadout" class="zoom-readout">100%</div>
+        </div>
+      </section>
+    </div>
+
+    <dialog id="configDialog">
+      <form method="dialog" class="config-form">
+        <header>
+          <h2>API 设置</h2>
+          <button value="cancel">×</button>
+        </header>
+        <label>
+          <span>线路地址</span>
+          <select id="apiBaseUrl">
+            <option value="https://api.yijiarj.cn">国内线路（大带宽）</option>
+            <option value="https://apius.yijiarj.cn">美国线路（大带宽）</option>
+            <option value="https://ai.yijiarj.cn">国内线路（小带宽）</option>
+          </select>
+        </label>
+        <label>
+          <span>API Key</span>
+          <input id="apiKey" type="password" placeholder="Bearer Token" autocomplete="off" />
+        </label>
+        <div class="dialog-actions">
+          <button id="saveConfig" value="default">保存</button>
+          <button id="testConfig" type="button">测试连接</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="previewDialog" class="preview-dialog">
+      <form method="dialog">
+        <header>
+          <h2 id="previewTitle">预览</h2>
+          <div>
+            <button id="previewZoomOut" type="button">-</button>
+            <button id="previewZoomReset" type="button">100%</button>
+            <button id="previewZoomIn" type="button">+</button>
+            <button id="previewDownload" type="button">下载</button>
+            <button value="cancel">×</button>
+          </div>
+        </header>
+        <div id="previewBody" class="preview-body"></div>
+      </form>
+    </dialog>
+
+    <dialog id="healthDialog" class="health-dialog">
+      <form method="dialog">
+        <header>
+          <h2>功能模块检测</h2>
+          <button value="cancel">×</button>
+        </header>
+        <section class="health-settings">
+          <label>
+            <span>检测项目</span>
+            <div class="check-list">
+              <label><input type="checkbox" name="modalHealthCheck" value="current" checked /> 当前选中模块</label>
+              <label><input type="checkbox" name="modalHealthCheck" value="video" checked /> 全部视频模块</label>
+              <label><input type="checkbox" name="modalHealthCheck" value="image" checked /> 全部图片模块</label>
+              <label><input type="checkbox" name="modalHealthCheck" value="chat" checked /> 全部聊天模块</label>
+            </div>
+          </label>
+          <label>
+            <span>检测线路</span>
+            <select id="modalHealthBaseMode">
+              <option value="current">当前设置线路</option>
+              <option value="all">三条线路全部检测</option>
+            </select>
+          </label>
+          <button id="runHealthCheckButton" type="button">开始检测</button>
+          <button id="removeFailedModulesButton" type="button" disabled>删除失败模块</button>
+        </section>
+        <section id="healthSummary" class="health-summary"></section>
+        <section id="healthResults" class="health-results"></section>
+      </form>
+    </dialog>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
