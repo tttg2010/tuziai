@@ -1,0 +1,15 @@
+{
+  "envId": "ai-rh202602-4g44noj4b1870204",
+  "siteUrl": "https://ai-rh202602-4g44noj4b1870204-1259354505.tcloudbaseapp.com",
+  "hosting": {
+    "cloudPath": "/",
+    "files": [
+      "index.html",
+      "styles.css",
+      "script.js",
+      "tuzi-ai-logo.png",
+      "API_INDEX.md",
+      "README.md"
+    ]
+  }
+}
