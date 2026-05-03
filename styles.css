@@ -559,6 +559,12 @@ select, input[type="password"] { height: 40px; padding: 0 11px; }
   gap: 4px;
 }
 .node-actions button { padding: 3px 5px; }
+.local-history-note {
+  margin: 0;
+  padding: 6px 8px 0;
+  color: #7f8899;
+  font-size: 10px;
+}
 
 .task-grid, .result-grid {
   display: grid;

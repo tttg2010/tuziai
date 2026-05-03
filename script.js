@@ -1,5 +1,7 @@
 const API_CONFIG_KEY = "lingyu-api-config";
 const REMOVED_MODULES_KEY = "tuzi-removed-modules";
+const SAVED_TASKS_KEY = "tuzi-saved-results";
+const SAVED_DRAGGED_ITEMS_KEY = "tuzi-dragged-items";
 
 const fallbackModels = [
   { name: "veo_3_1-fast", description: "视频生成 · 任务轮询 · 画布工作流", category: "video", tags: "视频", price: 0.19, ratio: 1, group: "default" },
@@ -49,13 +51,13 @@ let state = {
   activeCategory: "all",
   size: "720x1280",
   count: 1,
-  tasks: [],
+  tasks: loadSavedTasks(),
   selectedCanvasItem: null,
   previewItem: null,
   preview: { scale: 1, x: 0, y: 0 },
   lastHealthResults: [],
   removedModules: loadRemovedModules(),
-  draggedItems: {},
+  draggedItems: loadSavedDraggedItems(),
   nodePositions: {
     source: { x: 88, y: 72 },
     result: { x: 88, y: 302 }
@@ -82,6 +84,33 @@ function loadRemovedModules() {
 
 function saveRemovedModules() {
   localStorage.setItem(REMOVED_MODULES_KEY, JSON.stringify(state.removedModules));
+}
+
+function loadSavedTasks() {
+  const saved = localStorage.getItem(SAVED_TASKS_KEY);
+  return saved ? JSON.parse(saved) : [];
+}
+
+function saveTasks() {
+  try {
+    const keep = state.tasks.slice(0, 120);
+    localStorage.setItem(SAVED_TASKS_KEY, JSON.stringify(keep));
+  } catch (error) {
+    console.warn("保存本地结果失败", error);
+  }
+}
+
+function loadSavedDraggedItems() {
+  const saved = localStorage.getItem(SAVED_DRAGGED_ITEMS_KEY);
+  return saved ? JSON.parse(saved) : {};
+}
+
+function saveDraggedItems() {
+  try {
+    localStorage.setItem(SAVED_DRAGGED_ITEMS_KEY, JSON.stringify(state.draggedItems));
+  } catch (error) {
+    console.warn("保存画布位置失败", error);
+  }
 }
 
 async function apiFetch(path, options = {}) {
@@ -254,6 +283,8 @@ function setActiveCategory(category) {
 }
 
 function renderTasks() {
+  saveTasks();
+  saveDraggedItems();
   const visibleTasks = getWorkspaceTasks();
   el("taskCount").textContent = `${visibleTasks.length} 个${getWorkspaceUnit()}`;
   const placeholders = Array.from({ length: Math.max(16, visibleTasks.length) }, (_, index) => visibleTasks[index]);
@@ -490,6 +521,7 @@ function bindCanvasGestures() {
           x: point.x - dragTarget.offset.x,
           y: point.y - dragTarget.offset.y
         };
+        saveDraggedItems();
         renderTasks();
       }
       return;
@@ -575,6 +607,7 @@ function getPinchState(pointers) {
 
 function markTaskError(taskId, message) {
   state.tasks = state.tasks.map((task) => task.id === taskId ? { ...task, status: "error", error: message } : task);
+  saveTasks();
   renderTasks();
 }
 
@@ -585,12 +618,19 @@ function createLocalPendingTask() {
     kind: state.selectedModel.category,
     status: "queued",
     progress: 0,
+    prompt: el("prompt").value.trim(),
     created_at: Math.floor(Date.now() / 1000)
   };
 }
 
 function replaceTaskId(localId, remoteTask) {
   state.tasks = state.tasks.map((task) => task.id === localId ? { ...task, ...remoteTask, id: remoteTask.id || localId } : task);
+  if (state.draggedItems[localId] && remoteTask.id) {
+    state.draggedItems[remoteTask.id] = state.draggedItems[localId];
+    delete state.draggedItems[localId];
+  }
+  saveTasks();
+  saveDraggedItems();
   renderTasks();
   return remoteTask.id || localId;
 }
@@ -990,6 +1030,7 @@ function bindEvents() {
 
   el("clearDone").addEventListener("click", () => {
     state.tasks = state.tasks.filter((task) => getTaskStatus(task).className !== "completed");
+    saveTasks();
     renderTasks();
   });
 
@@ -1015,6 +1056,7 @@ function bindEvents() {
       for (let i = 0; i < state.count; i += 1) {
         const localTask = createLocalPendingTask();
         state.tasks.unshift(localTask);
+        saveTasks();
         renderTasks();
         const task = await createFeatureTask();
         const taskId = replaceTaskId(localTask.id, { ...task, status: task.status || "queued", progress: task.progress || 0 });
