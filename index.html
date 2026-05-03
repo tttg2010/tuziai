@@ -82,16 +82,7 @@
           <section id="chatOptions" class="feature-options hidden">
             <label>
               <span>系统角色</span>
-              <select id="systemRolePreset">
-                <option value="">自定义</option>
-                <option value="general">通用助手</option>
-                <option value="coder">代码工程师</option>
-                <option value="copywriter">文案策划</option>
-                <option value="analyst">分析顾问</option>
-                <option value="translator">翻译润色</option>
-                <option value="teacher">耐心导师</option>
-                <option value="product">产品经理</option>
-              </select>
+              <div id="roleAvatarGrid" class="role-avatar-grid" aria-label="系统角色预设"></div>
               <textarea id="systemPrompt" placeholder="可选：设置模型回答风格、身份或约束..."></textarea>
             </label>
             <div class="field-grid">
