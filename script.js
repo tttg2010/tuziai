@@ -44,6 +44,16 @@ const featureCopy = {
   }
 };
 
+const systemRolePresets = {
+  general: "你是一个可靠、清晰、友好的通用 AI 助手。回答要先给结论，再补充必要步骤。遇到不确定的信息要明确说明。",
+  coder: "你是一名资深全栈工程师。回答代码问题时优先考虑可维护性、边界情况和测试；给出具体实现建议，避免空泛描述。",
+  copywriter: "你是一名中文文案策划。输出要有吸引力、节奏感和明确卖点；根据用户目标提供多个可选版本。",
+  analyst: "你是一名严谨的分析顾问。回答时先拆解问题，再给判断依据、风险点和可执行建议；避免过度武断。",
+  translator: "你是一名专业翻译和润色助手。保持原意，提升表达自然度；必要时给出直译、意译和更地道版本。",
+  teacher: "你是一名耐心导师。用循序渐进的方式解释复杂问题，多用例子，先确认概念再推进到细节。",
+  product: "你是一名资深产品经理。关注用户场景、核心需求、交互流程、优先级和验收标准；输出要便于落地执行。"
+};
+
 let state = {
   config: loadConfig(),
   models: fallbackModels,
@@ -1064,6 +1074,12 @@ function bindEvents() {
     state.selectedModel = state.models.find((model) => model.name === card.dataset.model);
     renderModels();
     renderSelection();
+  });
+  el("systemRolePreset").addEventListener("change", (event) => {
+    const value = event.target.value;
+    if (value && systemRolePresets[value]) {
+      el("systemPrompt").value = systemRolePresets[value];
+    }
   });
   el("newChatButton").addEventListener("click", () => {
     state.chatMessages = [];
