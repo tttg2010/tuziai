@@ -221,7 +221,8 @@ const systemRolePresets = [
 ];
 
 const squareTags = [
-  "全部", "波普艺术", "怪诞卡通", "节日氛围", "游戏周边", "极简美学", "机甲",
+  "全部", "图片", "视频", "系统生成", "抓取素材", "YouMind", "Nano Banana Pro", "GPT Image 2",
+  "波普艺术", "怪诞卡通", "节日氛围", "游戏周边", "极简美学", "机甲",
   "虚假风美学", "屏幕模拟", "趋势分析", "健康", "品牌视觉", "二次元", "校园",
   "冬泳", "疯批感", "AI工作流", "空间改造", "公式美学", "创意质感", "自然奇观",
   "复古美学", "中式克苏鲁", "数字人", "创意海报", "赛博朋克", "太空探索", "证件照",
@@ -237,6 +238,7 @@ let state = {
   activeMode: "models",
   galleryFilter: "all",
   galleryTag: "全部",
+  externalPrompts: Array.isArray(window.YOUMIND_PROMPTS) ? window.YOUMIND_PROMPTS : [],
   size: "720x1280",
   count: 1,
   tasks: loadSavedTasks(),
@@ -505,8 +507,13 @@ function setAppMode(mode) {
 }
 
 function renderSquareFilters() {
-  el("squareTagList").innerHTML = squareTags.map((tag) => `
-    <button type="button" class="square-tag ${state.galleryTag === tag ? "active" : ""}" data-square-tag="${tag}">${tag}</button>
+  const tags = getGalleryTagCloud();
+  if (!tags.some((item) => item.tag === state.galleryTag)) state.galleryTag = "全部";
+  el("squareTagList").innerHTML = tags.map((item) => `
+    <button type="button" class="square-tag tag-cloud-${item.level} ${state.galleryTag === item.tag ? "active" : ""}" data-square-tag="${escapeHtml(item.tag)}">
+      <span>${escapeHtml(item.tag)}</span>
+      <small>${item.count}</small>
+    </button>
   `).join("");
 }
 
@@ -517,11 +524,20 @@ function renderGallery() {
     return;
   }
   el("galleryMasonry").innerHTML = items.map((item) => `
-    <article class="gallery-card">
+    <article class="gallery-card ${item.sourceType === "抓取" ? "scraped" : "system"}">
       ${item.type === "video" ? `<video src="${item.url}" controls muted></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
       <div class="gallery-card-body">
+        <div class="gallery-card-meta">
+          <span>${escapeHtml(item.modelLabel || item.model || (item.type === "video" ? "视频" : "图片"))}</span>
+          <span>${escapeHtml(item.sourceType || "系统生成")}</span>
+        </div>
         <h3>${escapeHtml(item.title)}</h3>
+        <p>${escapeHtml(item.author ? `作者：${item.author}` : "作者：当前用户")}</p>
         <div class="gallery-card-tags">${item.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
+        <div class="gallery-card-actions">
+          <button type="button" class="gallery-use" data-gallery-prompt="${escapeHtml(item.prompt || item.title)}">使用提示词</button>
+          ${item.detailUrl ? `<a href="${escapeHtml(item.detailUrl)}" target="_blank" rel="noopener noreferrer">来源</a>` : ""}
+        </div>
       </div>
     </article>
   `).join("");
@@ -529,7 +545,15 @@ function renderGallery() {
 
 function getGalleryItems() {
   const query = el("squareTagSearch")?.value.trim() || "";
-  return state.tasks
+  return getRawGalleryItems()
+    .filter(itemMatchesGalleryFilter)
+    .filter((item) => state.galleryTag === "全部" || item.tags.includes(state.galleryTag))
+    .filter((item) => !query || item.tags.some((tag) => tag.includes(query)) || item.title.includes(query) || item.modelLabel?.includes(query) || item.author?.includes(query))
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+function getRawGalleryItems() {
+  const systemItems = state.tasks
     .filter((task) => task.url || task.imageUrl)
     .map((task) => {
       const type = task.url ? "video" : "image";
@@ -538,14 +562,60 @@ function getGalleryItems() {
         type,
         url: task.url || task.imageUrl,
         title: task.prompt || (type === "video" ? "未命名视频作品" : "未命名图片作品"),
-        tags,
+        prompt: task.prompt || "",
+        sourceType: "系统生成",
+        author: "当前用户",
+        model: task.model || state.selectedModel?.name || "",
+        modelLabel: formatModelTitle(task.model || state.selectedModel?.name || ""),
+        tags: Array.from(new Set([...tags, "系统生成"])),
         createdAt: task.created_at || 0
       };
-    })
-    .filter((item) => state.galleryFilter === "all" || state.galleryFilter === "history" || item.type === state.galleryFilter)
-    .filter((item) => state.galleryTag === "全部" || item.tags.includes(state.galleryTag))
-    .filter((item) => !query || item.tags.some((tag) => tag.includes(query)) || item.title.includes(query))
-    .sort((a, b) => b.createdAt - a.createdAt);
+    });
+  const scrapedItems = state.externalPrompts.map((item) => ({
+    ...item,
+    tags: Array.from(new Set([...(Array.isArray(item.tags) ? item.tags : getGalleryTags(item, item.type || "image")), "抓取素材"])),
+    sourceType: item.sourceType || "抓取",
+    createdAt: item.createdAt || 0
+  }));
+  return [...systemItems, ...scrapedItems];
+}
+
+function itemMatchesGalleryFilter(item) {
+  if (state.galleryFilter === "all") return true;
+  if (state.galleryFilter === "system") return item.sourceType === "系统生成";
+  if (state.galleryFilter === "scraped") return item.sourceType === "抓取";
+  return item.type === state.galleryFilter;
+}
+
+function getGalleryTagCloud() {
+  const counts = new Map([["全部", 0]]);
+  getRawGalleryItems().filter(itemMatchesGalleryFilter).forEach((item) => {
+    counts.set("全部", counts.get("全部") + 1);
+    item.tags.forEach((tag) => counts.set(tag, (counts.get(tag) || 0) + 1));
+  });
+  squareTags.forEach((tag) => {
+    if (counts.has(tag)) return;
+    const count = getRawGalleryItems().filter(itemMatchesGalleryFilter).filter((item) => item.tags.includes(tag)).length;
+    if (count) counts.set(tag, count);
+  });
+  const entries = [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count, level: getTagCloudLevel(tag, count, counts) }))
+    .filter((item) => item.tag === "全部" || item.count > 0);
+  return entries.sort((a, b) => {
+    if (a.tag === "全部") return -1;
+    if (b.tag === "全部") return 1;
+    return b.count - a.count || a.tag.localeCompare(b.tag, "zh-Hans-CN");
+  });
+}
+
+function getTagCloudLevel(tag, count, counts) {
+  if (tag === "全部") return 4;
+  const max = Math.max(1, ...[...counts.entries()].filter(([name]) => name !== "全部").map(([, value]) => value));
+  const ratio = count / max;
+  if (ratio > 0.72) return 4;
+  if (ratio > 0.42) return 3;
+  if (ratio > 0.18) return 2;
+  return 1;
 }
 
 function getGalleryTags(task, type) {
@@ -1356,13 +1426,30 @@ function bindEvents() {
   document.querySelectorAll(".gallery-tab").forEach((button) => {
     button.addEventListener("click", () => {
       state.galleryFilter = button.dataset.galleryFilter;
+      state.galleryTag = "全部";
       document.querySelectorAll(".gallery-tab").forEach((item) => item.classList.toggle("active", item === button));
+      renderSquareFilters();
       renderGallery();
     });
   });
   el("squareSearchConfirm").addEventListener("click", renderGallery);
   el("squareTagSearch").addEventListener("keydown", (event) => {
     if (event.key === "Enter") renderGallery();
+  });
+  el("galleryMasonry").addEventListener("click", (event) => {
+    const useButton = event.target.closest(".gallery-use");
+    if (!useButton) return;
+    setAppMode("models");
+    const imageModel = state.models.find((model) => model.category === "image" && /banana|image|gemini/i.test(model.name)) || state.models.find((model) => model.category === "image");
+    if (imageModel) {
+      state.selectedModel = imageModel;
+      state.activeCategory = "image";
+      document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.category === "image"));
+      renderModels();
+      renderSelection();
+    }
+    el("prompt").value = useButton.dataset.galleryPrompt || "";
+    el("prompt").focus();
   });
   el("openConfig").addEventListener("click", () => {
     el("apiBaseUrl").value = state.config.baseUrl;

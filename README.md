@@ -15,5 +15,13 @@ ai大模型聚合
 tcb hosting deploy index.html /index.html -e ai-rh202602-4g44noj4b1870204
 tcb hosting deploy styles.css /styles.css -e ai-rh202602-4g44noj4b1870204
 tcb hosting deploy script.js /script.js -e ai-rh202602-4g44noj4b1870204
+tcb hosting deploy youmind-prompts.js /youmind-prompts.js -e ai-rh202602-4g44noj4b1870204
 tcb hosting deploy tuzi-ai-logo.png /tuzi-ai-logo.png -e ai-rh202602-4g44noj4b1870204
+tcb hosting deploy scraped/youmind/media /youmind-media -e ai-rh202602-4g44noj4b1870204
+```
+
+提示词广场外部素材导入：
+
+```bash
+node tools/import-youmind-prompts.mjs
 ```

@@ -202,22 +202,55 @@ button { cursor: pointer; }
 .square-tag-list {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 9px 8px;
 }
 
 .square-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   border: 1px solid #68521b;
   border-radius: 999px;
   background: transparent;
   color: #b9b0a0;
-  padding: 6px 11px;
+  padding: 7px 11px;
   font-size: 12px;
+  line-height: 1;
+  transition: transform .18s ease, color .18s ease, border-color .18s ease, background .18s ease, opacity .18s ease;
+}
+
+.square-tag small {
+  color: #6e7688;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.square-tag.tag-cloud-1 { font-size: 11px; opacity: .78; }
+.square-tag.tag-cloud-2 { font-size: 12px; opacity: .9; }
+.square-tag.tag-cloud-3 {
+  border-color: #0b7a88;
+  color: #41dff2;
+  font-size: 13px;
+}
+.square-tag.tag-cloud-4 {
+  border-color: #18d6ee;
+  color: #75f1ff;
+  font-size: 14px;
+  font-weight: 900;
 }
 
 .square-tag.active,
 .square-tag:hover {
   border-color: #08d4ef;
   background: #07313c;
+  color: #6af1ff;
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.square-tag.active small,
+.square-tag:hover small {
   color: #6af1ff;
 }
 
@@ -457,10 +490,40 @@ button { cursor: pointer; }
   padding: 12px;
 }
 
+.gallery-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 9px;
+}
+
+.gallery-card-meta span {
+  border: 1px solid rgba(48, 232, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(9, 216, 247, 0.12);
+  color: #49e9ff;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.gallery-card.system .gallery-card-meta span {
+  border-color: rgba(39, 226, 145, 0.35);
+  background: rgba(39, 226, 145, 0.12);
+  color: #3df0a0;
+}
+
 .gallery-card h3 {
   margin: 0 0 10px;
   color: #e9edf6;
   font-size: 13px;
+  line-height: 1.45;
+}
+
+.gallery-card p {
+  margin: -2px 0 10px;
+  color: #8f99ab;
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -476,6 +539,34 @@ button { cursor: pointer; }
   color: #30e8ff;
   padding: 5px 8px;
   font-size: 11px;
+}
+
+.gallery-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.gallery-card-actions button,
+.gallery-card-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  border: 1px solid #2f3542;
+  border-radius: 6px;
+  background: #11141a;
+  color: #dbe8f7;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.gallery-card-actions button {
+  color: #0b1015;
+  border-color: #22d5f1;
+  background: #30e8ff;
 }
 
 .gallery-empty {
