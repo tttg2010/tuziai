@@ -220,11 +220,23 @@ const systemRolePresets = [
   }
 ];
 
+const squareTags = [
+  "全部", "波普艺术", "怪诞卡通", "节日氛围", "游戏周边", "极简美学", "机甲",
+  "虚假风美学", "屏幕模拟", "趋势分析", "健康", "品牌视觉", "二次元", "校园",
+  "冬泳", "疯批感", "AI工作流", "空间改造", "公式美学", "创意质感", "自然奇观",
+  "复古美学", "中式克苏鲁", "数字人", "创意海报", "赛博朋克", "太空探索", "证件照",
+  "多重风格", "塔罗占卜", "水彩风格", "美漫风格", "中式玄幻", "科幻艺术", "超写实",
+  "四视图", "修罗", "美式复古", "唯美光影", "浪漫主义", "潮流涂鸦", "新闻纪实"
+];
+
 let state = {
   config: loadConfig(),
   models: fallbackModels,
   selectedModel: fallbackModels[0],
   activeCategory: "all",
+  activeMode: "models",
+  galleryFilter: "all",
+  galleryTag: "全部",
   size: "720x1280",
   count: 1,
   tasks: loadSavedTasks(),
@@ -460,7 +472,7 @@ function getCurrentCopy() {
 function renderFeaturePanel() {
   const category = state.selectedModel.category;
   const copy = getCurrentCopy();
-  document.querySelector(".app-shell").classList.toggle("chat-layout", category === "chat");
+  document.querySelector(".app-shell").classList.toggle("chat-layout", category === "chat" && state.activeMode === "models");
   el("promptLabel").innerHTML = `${copy.promptLabel} <b>*</b>`;
   el("prompt").placeholder = copy.placeholder;
   el("submitLabel").textContent = copy.submit;
@@ -477,6 +489,72 @@ function renderFeaturePanel() {
   if (category === "image") renderImageControls();
   if (category === "chat") renderChatSurface();
   renderWorkspaceForFeature();
+}
+
+function setAppMode(mode) {
+  state.activeMode = mode;
+  document.querySelectorAll(".mode").forEach((button) => {
+    button.classList.toggle("active", button.dataset.mode === mode);
+  });
+  document.querySelector(".app-shell").classList.toggle("gallery-layout", mode === "square");
+  document.querySelector(".app-shell").classList.toggle("chat-layout", mode === "models" && state.selectedModel.category === "chat");
+  el("squareFilters").classList.toggle("hidden", mode !== "square");
+  el("galleryPanel").classList.toggle("hidden", mode !== "square");
+  renderSquareFilters();
+  renderGallery();
+}
+
+function renderSquareFilters() {
+  el("squareTagList").innerHTML = squareTags.map((tag) => `
+    <button type="button" class="square-tag ${state.galleryTag === tag ? "active" : ""}" data-square-tag="${tag}">${tag}</button>
+  `).join("");
+}
+
+function renderGallery() {
+  const items = getGalleryItems();
+  if (!items.length) {
+    el("galleryMasonry").innerHTML = `<div class="gallery-empty">暂无生成图片或视频<br>生成后会自动出现在灵感广场</div>`;
+    return;
+  }
+  el("galleryMasonry").innerHTML = items.map((item) => `
+    <article class="gallery-card">
+      ${item.type === "video" ? `<video src="${item.url}" controls muted></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
+      <div class="gallery-card-body">
+        <h3>${escapeHtml(item.title)}</h3>
+        <div class="gallery-card-tags">${item.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
+      </div>
+    </article>
+  `).join("");
+}
+
+function getGalleryItems() {
+  const query = el("squareTagSearch")?.value.trim() || "";
+  return state.tasks
+    .filter((task) => task.url || task.imageUrl)
+    .map((task) => {
+      const type = task.url ? "video" : "image";
+      const tags = getGalleryTags(task, type);
+      return {
+        type,
+        url: task.url || task.imageUrl,
+        title: task.prompt || (type === "video" ? "未命名视频作品" : "未命名图片作品"),
+        tags,
+        createdAt: task.created_at || 0
+      };
+    })
+    .filter((item) => state.galleryFilter === "all" || state.galleryFilter === "history" || item.type === state.galleryFilter)
+    .filter((item) => state.galleryTag === "全部" || item.tags.includes(state.galleryTag))
+    .filter((item) => !query || item.tags.some((tag) => tag.includes(query)) || item.title.includes(query))
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+function getGalleryTags(task, type) {
+  const base = type === "video" ? ["视频", "AI工作流"] : ["图片", "创意质感"];
+  const model = String(task.model || "").toLowerCase();
+  if (model.includes("banana")) base.push("超写实");
+  if (model.includes("gemini")) base.push("唯美光影");
+  if (model.includes("veo")) base.push("创意海报");
+  return Array.from(new Set(base));
 }
 
 function renderRoleAvatars() {
@@ -541,6 +619,7 @@ function setActiveCategory(category) {
 function renderTasks() {
   saveTasks();
   saveDraggedItems();
+  if (state.activeMode === "square") renderGallery();
   const visibleTasks = getWorkspaceTasks();
   el("taskCount").textContent = `${visibleTasks.length} 个${getWorkspaceUnit()}`;
   const placeholders = Array.from({ length: Math.max(16, visibleTasks.length) }, (_, index) => visibleTasks[index]);
@@ -1264,6 +1343,27 @@ async function pollTask(taskId) {
 }
 
 function bindEvents() {
+  document.querySelectorAll(".mode[data-mode]").forEach((button) => {
+    button.addEventListener("click", () => setAppMode(button.dataset.mode));
+  });
+  el("squareTagList").addEventListener("click", (event) => {
+    const tagButton = event.target.closest("[data-square-tag]");
+    if (!tagButton) return;
+    state.galleryTag = tagButton.dataset.squareTag;
+    renderSquareFilters();
+    renderGallery();
+  });
+  document.querySelectorAll(".gallery-tab").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.galleryFilter = button.dataset.galleryFilter;
+      document.querySelectorAll(".gallery-tab").forEach((item) => item.classList.toggle("active", item === button));
+      renderGallery();
+    });
+  });
+  el("squareSearchConfirm").addEventListener("click", renderGallery);
+  el("squareTagSearch").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") renderGallery();
+  });
   el("openConfig").addEventListener("click", () => {
     el("apiBaseUrl").value = state.config.baseUrl;
     el("apiKey").value = state.config.apiKey;
@@ -1611,3 +1711,4 @@ renderSelection();
 renderTasks();
 renderCanvasTransform();
 renderNodePositions();
+renderSquareFilters();

@@ -18,9 +18,9 @@
         </header>
 
         <nav class="top-modes" aria-label="模式">
-          <button class="mode active" data-kind="video">大模型</button>
+          <button class="mode active" data-mode="models">大模型</button>
           <button class="mode">智能体</button>
-          <button class="mode">灵感广场</button>
+          <button class="mode" data-mode="square">灵感广场</button>
         </nav>
 
         <div class="tabs" role="tablist">
@@ -42,6 +42,15 @@
             <small>按模型检查接口依赖</small>
           </span>
         </button>
+
+        <section id="squareFilters" class="square-filters hidden">
+          <h2>分类筛选</h2>
+          <div class="square-search-row">
+            <input id="squareTagSearch" placeholder="搜索标签..." />
+            <button id="squareSearchConfirm" type="button">确定</button>
+          </div>
+          <div id="squareTagList" class="square-tag-list"></div>
+        </section>
 
         <section id="modelList" class="model-list"></section>
 
@@ -190,6 +199,18 @@
             </button>
           </div>
         </form>
+      </main>
+
+      <main id="galleryPanel" class="gallery-panel hidden" aria-label="灵感广场">
+        <header class="gallery-topbar">
+          <div class="gallery-tabs">
+            <button class="gallery-tab active" data-gallery-filter="all">全部</button>
+            <button class="gallery-tab" data-gallery-filter="image">图片</button>
+            <button class="gallery-tab" data-gallery-filter="video">视频</button>
+            <button class="gallery-tab" data-gallery-filter="history">使用记录</button>
+          </div>
+        </header>
+        <section id="galleryMasonry" class="gallery-masonry"></section>
       </main>
 
       <section id="canvasWorkspace" class="canvas-workspace" aria-label="工作区">
