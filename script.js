@@ -930,8 +930,20 @@ async function createChatCompletion() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model: state.selectedModel.name, messages })
   });
-  if (!response.ok) throw new Error(`聊天调用失败：${response.status}`);
+  if (!response.ok) throw new Error(getChatErrorMessage(response.status));
   return response.json();
+}
+
+function getChatErrorMessage(status) {
+  const messages = {
+    401: "聊天调用失败：API Key 无效或未授权。",
+    403: "聊天调用失败：当前令牌没有访问该模型的权限。",
+    429: "聊天调用失败：请求过于频繁或额度不足。",
+    500: "聊天调用失败：服务端异常，请稍后重试。",
+    502: "聊天调用失败：上游模型服务暂时不可用。",
+    503: "聊天调用失败：模型服务暂时不可用，可能是线路拥堵、模型维护或当前分组不可用。请稍后重试，或切换线路/模型。"
+  };
+  return messages[status] || `聊天调用失败：HTTP ${status}`;
 }
 
 async function createFeatureTask() {
@@ -942,22 +954,40 @@ async function createFeatureTask() {
     state.chatMessages.push({ role: "assistant pending", content: "正在思考..." });
     renderChatSurface();
     saveChatMessages();
-    const payload = await createChatCompletion();
-    const answer = payload.choices?.[0]?.message?.content || JSON.stringify(payload);
-    state.chatMessages = state.chatMessages.filter((message) => message.role !== "assistant pending");
-    state.chatMessages.push({ role: "assistant", content: answer });
-    saveChatMessages();
-    renderChatSurface();
-    return {
-      id: payload.id || `chat_${Date.now()}`,
-      object: "chat.completion",
-      model: state.selectedModel.name,
-      status: "completed",
-      progress: 100,
-      kind: "chat",
-      prompt: userContent,
-      answer
-    };
+    try {
+      const payload = await createChatCompletion();
+      const answer = payload.choices?.[0]?.message?.content || JSON.stringify(payload);
+      state.chatMessages = state.chatMessages.filter((message) => message.role !== "assistant pending");
+      state.chatMessages.push({ role: "assistant", content: answer });
+      saveChatMessages();
+      renderChatSurface();
+      return {
+        id: payload.id || `chat_${Date.now()}`,
+        object: "chat.completion",
+        model: state.selectedModel.name,
+        status: "completed",
+        progress: 100,
+        kind: "chat",
+        prompt: userContent,
+        answer
+      };
+    } catch (error) {
+      state.chatMessages = state.chatMessages.filter((message) => message.role !== "assistant pending");
+      state.chatMessages.push({ role: "assistant error", content: error.message });
+      saveChatMessages();
+      renderChatSurface();
+      return {
+        id: `chat_error_${Date.now()}`,
+        object: "chat.completion",
+        model: state.selectedModel.name,
+        status: "error",
+        progress: 100,
+        kind: "chat",
+        prompt: userContent,
+        answer: error.message,
+        error: error.message
+      };
+    }
   }
   if (state.selectedModel.category === "image") return createNanoBananaImage();
   throw new Error("当前功能暂未接入提交接口。");
