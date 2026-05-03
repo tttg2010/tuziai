@@ -243,6 +243,7 @@ function getCurrentCopy() {
 function renderFeaturePanel() {
   const category = state.selectedModel.category;
   const copy = getCurrentCopy();
+  document.querySelector(".app-shell").classList.toggle("chat-layout", category === "chat");
   el("promptLabel").innerHTML = `${copy.promptLabel} <b>*</b>`;
   el("prompt").placeholder = copy.placeholder;
   el("submitLabel").textContent = copy.submit;

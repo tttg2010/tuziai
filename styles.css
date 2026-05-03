@@ -32,6 +32,18 @@ button { cursor: pointer; }
   overflow: hidden;
 }
 
+.app-shell.chat-layout {
+  grid-template-columns: 216px minmax(520px, 1fr);
+}
+
+.app-shell.chat-layout .canvas-workspace {
+  display: none;
+}
+
+.app-shell.chat-layout .generator-panel {
+  max-width: none;
+}
+
 .model-rail, .generator-panel {
   background: linear-gradient(180deg, #121319, #090a0d);
   border-right: 1px solid var(--line);
@@ -291,6 +303,10 @@ button { cursor: pointer; }
   padding: 12px;
 }
 
+.app-shell.chat-layout .generator-panel {
+  padding: 18px clamp(18px, 4vw, 64px);
+}
+
 .api-card {
   display: flex;
   justify-content: space-between;
@@ -348,10 +364,10 @@ select, input[type="password"] { height: 40px; padding: 0 11px; }
 .chat-surface {
   display: flex;
   flex-direction: column;
-  min-height: 300px;
-  border: 1px solid #30333d;
-  border-radius: 8px;
-  background: #0c0d10;
+  min-height: 52vh;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   overflow: hidden;
 }
 
@@ -359,53 +375,96 @@ select, input[type="password"] { height: 40px; padding: 0 11px; }
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 8px;
-  border-bottom: 1px solid #262932;
+  padding: 4px 0 12px;
+  border-bottom: 0;
 }
 
 .chat-toolbar button {
-  border: 1px solid #343844;
-  border-radius: 7px;
-  color: #d7deeb;
-  background: #15171d;
-  padding: 6px 9px;
+  border: 1px solid #333946;
+  border-radius: 18px;
+  color: #dce5f5;
+  background: #171a21;
+  padding: 7px 12px;
   font-size: 12px;
 }
 
 .chat-messages {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  min-height: 260px;
-  max-height: 44vh;
+  gap: 16px;
+  min-height: 48vh;
+  max-height: 62vh;
   overflow: auto;
-  padding: 12px;
+  padding: 18px 0;
 }
 
 .chat-bubble {
-  max-width: 86%;
-  border: 1px solid #30333d;
-  border-radius: 8px;
-  padding: 9px 10px;
+  max-width: min(760px, 88%);
+  border: 0;
+  border-radius: 20px;
+  padding: 13px 15px;
   color: #e8edf7;
-  background: #16181f;
+  background: #171a21;
   white-space: pre-wrap;
 }
 
 .chat-bubble.user {
   align-self: flex-end;
-  border-color: #255865;
-  background: #0f3440;
+  background: #263241;
 }
 
 .chat-bubble.assistant {
   align-self: flex-start;
-  border-color: #343844;
+  background: transparent;
+  padding-left: 0;
 }
 
 .chat-bubble.pending {
   color: #9ba6ba;
   font-style: italic;
+}
+
+.app-shell.chat-layout .api-card {
+  border: 0;
+  background: transparent;
+  padding: 4px 0 18px;
+}
+
+.app-shell.chat-layout .api-card h2 {
+  font-size: 22px;
+}
+
+.app-shell.chat-layout #promptSection {
+  margin-top: auto;
+}
+
+.app-shell.chat-layout #promptSection > span {
+  display: none;
+}
+
+.app-shell.chat-layout #prompt {
+  min-height: 76px;
+  border-radius: 26px;
+  border-color: #303642;
+  background: #171a21;
+  padding: 18px 22px;
+  box-shadow: 0 14px 40px rgba(0,0,0,.18);
+}
+
+.app-shell.chat-layout .action-bar {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 8px;
+}
+
+.app-shell.chat-layout .stepper {
+  display: none;
+}
+
+.app-shell.chat-layout .primary {
+  max-width: 180px;
+  margin-left: auto;
+  border-radius: 22px;
 }
 
 .check-list {
