@@ -238,6 +238,7 @@ let state = {
   activeMode: "models",
   galleryFilter: "all",
   galleryTag: "全部",
+  galleryDetailId: null,
   externalPrompts: Array.isArray(window.YOUMIND_PROMPTS) ? window.YOUMIND_PROMPTS : [],
   size: "720x1280",
   count: 1,
@@ -518,14 +519,26 @@ function renderSquareFilters() {
 }
 
 function renderGallery() {
+  if (state.galleryDetailId) {
+    renderGalleryDetail();
+    return;
+  }
   const items = getGalleryItems();
+  el("galleryMasonry").classList.remove("hidden");
+  el("galleryDetail").classList.add("hidden");
   if (!items.length) {
     el("galleryMasonry").innerHTML = `<div class="gallery-empty">暂无生成图片或视频<br>生成后会自动出现在提示词广场</div>`;
     return;
   }
   el("galleryMasonry").innerHTML = items.map((item) => `
-    <article class="gallery-card ${item.sourceType === "抓取" ? "scraped" : "system"}">
-      ${item.type === "video" ? `<video src="${item.url}" controls muted></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
+    <article class="gallery-card ${item.sourceType === "抓取" ? "scraped" : "system"}" data-gallery-id="${escapeHtml(item.id)}" tabindex="0" role="button" aria-label="查看 ${escapeHtml(item.title)} 详情">
+      <div class="gallery-card-media">
+        ${item.type === "video" ? `<video src="${item.url}" controls muted></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
+        <span class="gallery-open-cue">查看详情</span>
+        <div class="gallery-hover-preview" aria-hidden="true">
+          ${item.type === "video" ? `<video src="${item.url}" muted autoplay loop playsinline></video>` : `<img src="${item.url}" alt="" />`}
+        </div>
+      </div>
       <div class="gallery-card-body">
         <div class="gallery-card-meta">
           <span>${escapeHtml(item.modelLabel || item.model || (item.type === "video" ? "视频" : "图片"))}</span>
@@ -541,6 +554,63 @@ function renderGallery() {
       </div>
     </article>
   `).join("");
+}
+
+function renderGalleryDetail() {
+  const item = getRawGalleryItems().find((entry) => entry.id === state.galleryDetailId);
+  if (!item) {
+    state.galleryDetailId = null;
+    renderGallery();
+    return;
+  }
+  const prompt = item.prompt || item.title;
+  el("galleryMasonry").classList.add("hidden");
+  el("galleryDetail").classList.remove("hidden");
+  el("galleryDetail").innerHTML = `
+    <article class="detail-page">
+      <nav class="detail-breadcrumb">
+        <button type="button" id="detailBack">提示词广场</button>
+        <span>›</span>
+        <span>${escapeHtml(item.modelLabel || item.model || "图片")}</span>
+        <span>›</span>
+        <strong>${escapeHtml(item.title)}</strong>
+      </nav>
+      <div class="detail-layout">
+        <section class="detail-main">
+          <div class="detail-kind">${escapeHtml(item.type === "video" ? "视频提示词" : "图像提示词")}</div>
+          <h1>${escapeHtml(item.title)}</h1>
+          <figure class="detail-hero">
+            ${item.type === "video" ? `<video src="${item.url}" controls></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
+          </figure>
+          <section class="detail-prompt-block">
+            <header>
+              <h2>提示词</h2>
+              <button type="button" class="gallery-use" data-gallery-prompt="${escapeHtml(prompt)}">使用提示词</button>
+            </header>
+            <pre>${escapeHtml(prompt)}</pre>
+          </section>
+        </section>
+        <aside class="detail-aside">
+          <div class="detail-author">
+            <small>作者</small>
+            <span>${escapeHtml(item.author || "当前用户")}</span>
+            <strong>${escapeHtml(item.sourceName || item.sourceType || "系统生成")}</strong>
+          </div>
+          <dl>
+            <div><dt>模型</dt><dd>${escapeHtml(item.modelLabel || item.model || "未标记")}</dd></div>
+            <div><dt>类型</dt><dd>${escapeHtml(item.sourceType || "系统生成")}</dd></div>
+            <div><dt>发布时间</dt><dd>${escapeHtml(item.publishedAt || "本地生成")}</dd></div>
+            <div><dt>原始语言</dt><dd>ZH</dd></div>
+          </dl>
+          <div class="detail-tags">${item.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
+          <div class="detail-actions">
+            <button type="button" class="gallery-use" data-gallery-prompt="${escapeHtml(prompt)}">使用提示词</button>
+            ${item.detailUrl ? `<a href="${escapeHtml(item.detailUrl)}" target="_blank" rel="noopener noreferrer">查看原始来源</a>` : ""}
+          </div>
+        </aside>
+      </div>
+    </article>
+  `;
 }
 
 function getGalleryItems() {
@@ -559,6 +629,7 @@ function getRawGalleryItems() {
       const type = task.url ? "video" : "image";
       const tags = getGalleryTags(task, type);
       return {
+        id: task.id || `system-${task.created_at || task.url || task.imageUrl}`,
         type,
         url: task.url || task.imageUrl,
         title: task.prompt || (type === "video" ? "未命名视频作品" : "未命名图片作品"),
@@ -1420,6 +1491,7 @@ function bindEvents() {
     const tagButton = event.target.closest("[data-square-tag]");
     if (!tagButton) return;
     state.galleryTag = tagButton.dataset.squareTag;
+    state.galleryDetailId = null;
     renderSquareFilters();
     renderGallery();
   });
@@ -1427,6 +1499,7 @@ function bindEvents() {
     button.addEventListener("click", () => {
       state.galleryFilter = button.dataset.galleryFilter;
       state.galleryTag = "全部";
+      state.galleryDetailId = null;
       document.querySelectorAll(".gallery-tab").forEach((item) => item.classList.toggle("active", item === button));
       renderSquareFilters();
       renderGallery();
@@ -1438,7 +1511,37 @@ function bindEvents() {
   });
   el("galleryMasonry").addEventListener("click", (event) => {
     const useButton = event.target.closest(".gallery-use");
+    if (useButton) {
+      useGalleryPrompt(useButton.dataset.galleryPrompt || "");
+      return;
+    }
+    if (event.target.closest("a")) return;
+    const card = event.target.closest("[data-gallery-id]");
+    if (!card) return;
+    state.galleryDetailId = card.dataset.galleryId;
+    renderGallery();
+    el("galleryPanel").scrollTop = 0;
+  });
+  el("galleryMasonry").addEventListener("keydown", (event) => {
+    if (!["Enter", " "].includes(event.key)) return;
+    const card = event.target.closest("[data-gallery-id]");
+    if (!card) return;
+    event.preventDefault();
+    state.galleryDetailId = card.dataset.galleryId;
+    renderGallery();
+    el("galleryPanel").scrollTop = 0;
+  });
+  el("galleryDetail").addEventListener("click", (event) => {
+    if (event.target.closest("#detailBack")) {
+      state.galleryDetailId = null;
+      renderGallery();
+      return;
+    }
+    const useButton = event.target.closest(".gallery-use");
     if (!useButton) return;
+    useGalleryPrompt(useButton.dataset.galleryPrompt || "");
+  });
+  function useGalleryPrompt(prompt) {
     setAppMode("models");
     const imageModel = state.models.find((model) => model.category === "image" && /banana|image|gemini/i.test(model.name)) || state.models.find((model) => model.category === "image");
     if (imageModel) {
@@ -1448,9 +1551,9 @@ function bindEvents() {
       renderModels();
       renderSelection();
     }
-    el("prompt").value = useButton.dataset.galleryPrompt || "";
+    el("prompt").value = prompt;
     el("prompt").focus();
-  });
+  }
   el("openConfig").addEventListener("click", () => {
     el("apiBaseUrl").value = state.config.baseUrl;
     el("apiKey").value = state.config.apiKey;
