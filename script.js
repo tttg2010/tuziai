@@ -363,8 +363,8 @@ function renderModels() {
     <button class="model-card ${model.name === state.selectedModel.name ? "active" : ""}" data-model="${model.name}">
       ${renderBrandLogo(model)}
       <span>
-        <h3>${model.name}</h3>
-        <p>${model.description}</p>
+        <h3 title="${escapeHtml(model.name)}">${formatModelTitle(model.name)}</h3>
+        <p>${getModelCardDescription(model)}</p>
       </span>
       <span class="badge">${finalPrice(model)}</span>
     </button>
@@ -372,6 +372,47 @@ function renderModels() {
   if (!list.length) {
     el("modelList").innerHTML = `<div class="empty-list">当前分类暂无可用模块</div>`;
   }
+}
+
+function formatModelTitle(name) {
+  const aliases = {
+    "gpt-5.2-codex": "GPT-5.2 Codex",
+    "gpt-5.1-codex-max": "GPT-5.1 Codex Max",
+    "gpt-5-codex": "GPT-5 Codex",
+    "openai-chat": "OpenAI Chat",
+    "nano_banana_pro": "Nano Banana Pro",
+    "nano-banana-2": "Nano Banana 2",
+    "gemini-3.1-flash-image-preview-1k": "Gemini Image 1K"
+  };
+  if (aliases[name]) return aliases[name];
+  return name
+    .replace(/^deepseek-ai\//i, "DeepSeek ")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .slice(0, 34);
+}
+
+function getModelCardDescription(model) {
+  const name = String(model.name || "").toLowerCase();
+  const group = model.group ? ` · ${model.group}` : "";
+  if (model.category === "video") {
+    if (name.includes("veo")) return `视频生成 · 图生/文生 · 任务轮询${group}`;
+    return `视频创作 · 结果预览 · 批量下载${group}`;
+  }
+  if (model.category === "image") {
+    if (name.includes("banana")) return `图片生成 · 多图参考 · URL 输出${group}`;
+    if (name.includes("gemini")) return `Gemini 图片 · 参考图创作${group}`;
+    return `图片理解/生成 · 多模态输入${group}`;
+  }
+  if (model.category === "chat") {
+    if (name.includes("codex")) return `代码与推理 · 长上下文 · 工程助手${group}`;
+    if (name.includes("deepseek")) return `中文推理 · 数学/代码 · 高性价比${group}`;
+    if (name.includes("grok")) return `实时问答 · 创意对话 · 快速响应${group}`;
+    if (name.includes("mini")) return `轻量对话 · 快速响应 · 低成本${group}`;
+    if (name.includes("gpt")) return `通用对话 · 推理写作 · 多场景${group}`;
+    return `聊天对话 · 多轮上下文 · 角色预设${group}`;
+  }
+  return `模型 · ${model.group || "default"}`;
 }
 
 function renderBrandLogo(model) {
