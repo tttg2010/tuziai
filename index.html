@@ -66,7 +66,15 @@
         </section>
 
         <form id="featureForm" class="form-stack">
-          <label>
+          <section id="chatSurface" class="chat-surface hidden">
+            <div class="chat-toolbar">
+              <button id="newChatButton" type="button">新对话</button>
+              <button id="clearChatButton" type="button">清空消息</button>
+            </div>
+            <div id="chatMessages" class="chat-messages"></div>
+          </section>
+
+          <label id="promptSection">
             <span id="promptLabel">提示词 <b>*</b></span>
             <textarea id="prompt" required placeholder="描述你想生成的视频内容..."></textarea>
           </label>

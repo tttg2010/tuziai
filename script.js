@@ -52,6 +52,7 @@ let state = {
   size: "720x1280",
   count: 1,
   tasks: loadSavedTasks(),
+  chatMessages: loadSavedChatMessages(),
   selectedCanvasItem: null,
   previewItem: null,
   preview: { scale: 1, x: 0, y: 0 },
@@ -103,6 +104,19 @@ function saveTasks() {
 function loadSavedDraggedItems() {
   const saved = localStorage.getItem(SAVED_DRAGGED_ITEMS_KEY);
   return saved ? JSON.parse(saved) : {};
+}
+
+function loadSavedChatMessages() {
+  const saved = localStorage.getItem("tuzi-chat-messages");
+  return saved ? JSON.parse(saved) : [];
+}
+
+function saveChatMessages() {
+  try {
+    localStorage.setItem("tuzi-chat-messages", JSON.stringify(state.chatMessages.slice(-80)));
+  } catch (error) {
+    console.warn("保存聊天记录失败", error);
+  }
 }
 
 function saveDraggedItems() {
@@ -239,8 +253,10 @@ function renderFeaturePanel() {
   el("videoControls").classList.toggle("hidden", category !== "video");
   el("watermarkSection").classList.toggle("hidden", category !== "video");
   el("chatOptions").classList.toggle("hidden", category !== "chat");
+  el("chatSurface").classList.toggle("hidden", category !== "chat");
   el("imageOptions").classList.toggle("hidden", category !== "image");
   if (category === "image") renderImageControls();
+  if (category === "chat") renderChatSurface();
   renderWorkspaceForFeature();
 }
 
@@ -250,12 +266,23 @@ function renderWorkspaceForFeature() {
   resultNode.classList.toggle("video-workspace", category === "video");
   resultNode.classList.toggle("image-workspace", category === "image");
   resultNode.classList.toggle("chat-workspace", category === "chat");
+  document.querySelector(".source-node").classList.toggle("chat-workspace", category === "chat");
   document.querySelector("#videoResultGrid").closest("section").classList.toggle("hidden", category !== "video");
   document.querySelector("#imageResultGrid").closest("section").classList.toggle("hidden", category !== "image");
   document.querySelector("#chatResultGrid").closest("section").classList.toggle("hidden", category !== "chat");
   el("downloadVideos").classList.toggle("hidden", category !== "video");
   el("downloadImages").classList.toggle("hidden", category !== "image");
   renderTasks();
+}
+
+function renderChatSurface() {
+  const messages = state.chatMessages.length
+    ? state.chatMessages
+    : [{ role: "assistant", content: `你好，我是 ${state.selectedModel.name}。可以直接像 GPT 一样和我对话。` }];
+  el("chatMessages").innerHTML = messages.map((message) => `
+    <div class="chat-bubble ${message.role.replace(/\s+/g, " ")}">${escapeHtml(message.content)}</div>
+  `).join("");
+  el("chatMessages").scrollTop = el("chatMessages").scrollHeight;
 }
 
 function renderImageControls() {
@@ -288,18 +315,20 @@ function renderTasks() {
   const visibleTasks = getWorkspaceTasks();
   el("taskCount").textContent = `${visibleTasks.length} 个${getWorkspaceUnit()}`;
   const placeholders = Array.from({ length: Math.max(16, visibleTasks.length) }, (_, index) => visibleTasks[index]);
-  el("taskGrid").innerHTML = placeholders.map((task) => {
-    if (!task) return `<div class="task-tile">等待任务</div>`;
-    const status = getTaskStatus(task);
-    const floating = state.draggedItems[task.id];
-    return `<button type="button" class="task-tile draggable-data ${status.className} ${floating ? "floating-data" : ""} ${state.selectedCanvasItem === task.id ? "selected" : ""}" data-task-id="${task.id}" style="${floating ? `left:${floating.x}px;top:${floating.y}px;` : ""}">
-      <span class="task-model">${task.model || state.selectedModel.name}</span>
-      <strong>${status.label}</strong>
-      <span>${status.detail}</span>
-      <span class="progress-track"><span class="progress-fill" style="width:${status.progress}%"></span></span>
-      <span>${status.progress}%</span>
-    </button>`;
-  }).join("");
+  el("taskGrid").innerHTML = state.selectedModel.category === "chat"
+    ? renderChatSessionCards(visibleTasks)
+    : placeholders.map((task) => {
+      if (!task) return `<div class="task-tile">等待任务</div>`;
+      const status = getTaskStatus(task);
+      const floating = state.draggedItems[task.id];
+      return `<button type="button" class="task-tile draggable-data ${status.className} ${floating ? "floating-data" : ""} ${state.selectedCanvasItem === task.id ? "selected" : ""}" data-task-id="${task.id}" style="${floating ? `left:${floating.x}px;top:${floating.y}px;` : ""}">
+        <span class="task-model">${task.model || state.selectedModel.name}</span>
+        <strong>${status.label}</strong>
+        <span>${status.detail}</span>
+        <span class="progress-track"><span class="progress-fill" style="width:${status.progress}%"></span></span>
+        <span>${status.progress}%</span>
+      </button>`;
+    }).join("");
 
   const videos = state.selectedModel.category === "video" ? state.tasks.filter((task) => task.url) : [];
   const images = state.selectedModel.category === "image" ? state.tasks.filter((task) => task.imageUrl) : [];
@@ -308,6 +337,18 @@ function renderTasks() {
   el("imageResultGrid").innerHTML = renderMediaResults(images, "image");
   el("chatResultGrid").innerHTML = renderChatResults(chats);
   renderNodePositions();
+}
+
+function renderChatSessionCards(items) {
+  if (!items.length) {
+    return `<div class="chat-session-empty">这里会记录每一次 GPT 对话</div>`;
+  }
+  return items.slice(0, 8).map((task) => `
+    <button type="button" class="chat-session-card draggable-data ${state.selectedCanvasItem === task.id ? "selected" : ""}" data-task-id="${task.id}">
+      <strong>${escapeHtml(task.prompt || "用户消息")}</strong>
+      <span>${escapeHtml(task.answer || "等待回复")}</span>
+    </button>
+  `).join("");
 }
 
 function getWorkspaceTasks() {
@@ -690,6 +731,11 @@ async function createChatCompletion() {
   const messages = [];
   const systemPrompt = el("systemPrompt").value.trim();
   if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
+  if (el("chatContext").value === "multi") {
+    state.chatMessages.slice(-12).forEach((message) => {
+      if (["user", "assistant"].includes(message.role)) messages.push({ role: message.role, content: message.content });
+    });
+  }
   messages.push({ role: "user", content: el("prompt").value.trim() });
   const response = await apiFetch("/v1/chat/completions", {
     method: "POST",
@@ -703,7 +749,17 @@ async function createChatCompletion() {
 async function createFeatureTask() {
   if (state.selectedModel.category === "video") return createVideoTask();
   if (state.selectedModel.category === "chat") {
+    const userContent = el("prompt").value.trim();
+    state.chatMessages.push({ role: "user", content: userContent });
+    state.chatMessages.push({ role: "assistant pending", content: "正在思考..." });
+    renderChatSurface();
+    saveChatMessages();
     const payload = await createChatCompletion();
+    const answer = payload.choices?.[0]?.message?.content || JSON.stringify(payload);
+    state.chatMessages = state.chatMessages.filter((message) => message.role !== "assistant pending");
+    state.chatMessages.push({ role: "assistant", content: answer });
+    saveChatMessages();
+    renderChatSurface();
     return {
       id: payload.id || `chat_${Date.now()}`,
       object: "chat.completion",
@@ -711,7 +767,8 @@ async function createFeatureTask() {
       status: "completed",
       progress: 100,
       kind: "chat",
-      answer: payload.choices?.[0]?.message?.content || JSON.stringify(payload)
+      prompt: userContent,
+      answer
     };
   }
   if (state.selectedModel.category === "image") return createNanoBananaImage();
@@ -1006,6 +1063,26 @@ function bindEvents() {
     state.selectedModel = state.models.find((model) => model.name === card.dataset.model);
     renderModels();
     renderSelection();
+  });
+  el("newChatButton").addEventListener("click", () => {
+    state.chatMessages = [];
+    saveChatMessages();
+    renderChatSurface();
+  });
+  el("clearChatButton").addEventListener("click", () => {
+    state.chatMessages = [];
+    state.tasks = state.tasks.filter((task) => task.kind !== "chat");
+    saveChatMessages();
+    saveTasks();
+    renderChatSurface();
+    renderTasks();
+  });
+  el("prompt").addEventListener("keydown", (event) => {
+    if (state.selectedModel.category !== "chat") return;
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      el("featureForm").requestSubmit();
+    }
   });
 
   document.querySelectorAll(".chip").forEach((chip) => {
