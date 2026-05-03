@@ -513,7 +513,7 @@ function renderSquareFilters() {
 function renderGallery() {
   const items = getGalleryItems();
   if (!items.length) {
-    el("galleryMasonry").innerHTML = `<div class="gallery-empty">暂无生成图片或视频<br>生成后会自动出现在灵感广场</div>`;
+    el("galleryMasonry").innerHTML = `<div class="gallery-empty">暂无生成图片或视频<br>生成后会自动出现在提示词广场</div>`;
     return;
   }
   el("galleryMasonry").innerHTML = items.map((item) => `
