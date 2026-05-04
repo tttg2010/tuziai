@@ -250,7 +250,7 @@ let state = {
   previewItem: null,
   preview: { scale: 1, x: 0, y: 0 },
   lastHealthResults: [],
-  inlineHealth: { status: "idle", category: null, results: [] },
+  inlineHealth: { status: "idle", category: null, results: [], currentModel: null, total: 0, completed: 0 },
   removedModules: loadRemovedModules(),
   draggedItems: loadSavedDraggedItems(),
   nodePositions: {
@@ -380,13 +380,14 @@ function renderModels() {
     .filter((model) => state.activeCategory === "all" || model.category === state.activeCategory)
     .filter((model) => `${model.name} ${model.description}`.toLowerCase().includes(query));
   el("modelList").innerHTML = list.map((model) => `
-    <button class="model-card ${model.name === state.selectedModel.name ? "active" : ""}" data-model="${model.name}">
+    <button class="model-card ${model.name === state.selectedModel.name ? "active" : ""} ${getModelHealthClass(model)}" data-model="${model.name}">
       ${renderBrandLogo(model)}
       <span>
         <h3 title="${escapeHtml(model.name)}">${formatModelTitle(model.name)}</h3>
         <p>${getModelCardDescription(model)}</p>
       </span>
       <span class="badge">${finalPrice(model)}</span>
+      ${renderModelHealthProgress(model)}
     </button>
   `).join("");
   if (!list.length) {
@@ -397,8 +398,8 @@ function renderModels() {
 function renderHealthToolCard() {
   const button = el("healthToolButton");
   if (!button) return;
-  const status = state.inlineHealth.status;
-  const results = state.inlineHealth.results || [];
+  const status = state.inlineHealth.category === state.activeCategory ? state.inlineHealth.status : "idle";
+  const results = state.inlineHealth.category === state.activeCategory ? state.inlineHealth.results || [] : [];
   const okCount = results.filter((item) => item.ok).length;
   const unknownCount = results.filter((item) => item.indeterminate).length;
   const failCount = results.filter((item) => !item.ok && !item.indeterminate).length;
@@ -426,6 +427,37 @@ function renderHealthToolCard() {
     </span>
     <i class="health-dot ${dotClass}" aria-label="${escapeHtml(dotLabel)}"></i>
   `;
+}
+
+function getModelHealthItem(model) {
+  if (state.inlineHealth.category !== state.activeCategory) return null;
+  return (state.inlineHealth.results || []).find((item) => item.modelName === model.name) || null;
+}
+
+function getModelHealthClass(model) {
+  const item = getModelHealthItem(model);
+  if (state.inlineHealth.status === "running" && state.inlineHealth.currentModel === model.name) return "health-running";
+  if (!item) return "";
+  if (item.ok) return "health-ok";
+  if (item.indeterminate) return "health-unknown";
+  return "health-fail";
+}
+
+function renderModelHealthProgress(model) {
+  if (state.inlineHealth.category !== state.activeCategory || state.inlineHealth.status === "idle") return "";
+  const item = getModelHealthItem(model);
+  const isCurrent = state.inlineHealth.status === "running" && state.inlineHealth.currentModel === model.name;
+  const isDone = Boolean(item);
+  const className = isCurrent
+    ? "running"
+    : item?.ok
+      ? "ok"
+      : item?.indeterminate
+        ? "unknown"
+        : isDone
+          ? "fail"
+          : "pending";
+  return `<span class="model-health-progress ${className}" aria-hidden="true">${".".repeat(18)}</span>`;
 }
 
 function getHealthCategoryLabel(category) {
@@ -1353,7 +1385,24 @@ async function runHealthChecks() {
 async function runInlineHealthCheck() {
   const models = getModelsForInlineHealthCheck();
   if (!models.length) throw new Error("当前分类没有可检测模块");
-  const results = await Promise.all(models.map((model) => runModuleHealthCheck(model, PRIMARY_API_BASE_URL)));
+  const results = [];
+  state.inlineHealth = {
+    status: "running",
+    category: state.activeCategory,
+    results,
+    currentModel: models[0].name,
+    total: models.length,
+    completed: 0
+  };
+  renderModels();
+  for (const model of models) {
+    state.inlineHealth.currentModel = model.name;
+    renderModels();
+    const result = await runModuleHealthCheck(model, PRIMARY_API_BASE_URL);
+    results.push(result);
+    state.inlineHealth.completed = results.length;
+    renderModels();
+  }
   state.lastHealthResults = results;
   return results;
 }
@@ -1697,16 +1746,16 @@ function bindEvents() {
   el("healthToolButton").addEventListener("click", async () => {
     const button = el("healthToolButton");
     button.disabled = true;
-    state.inlineHealth = { status: "running", category: state.activeCategory, results: [] };
+    state.inlineHealth = { status: "running", category: state.activeCategory, results: [], currentModel: null, total: 0, completed: 0 };
     renderHealthToolCard();
     try {
       const results = await runInlineHealthCheck();
-      state.inlineHealth = { status: "done", category: state.activeCategory, results };
+      state.inlineHealth = { status: "done", category: state.activeCategory, results, currentModel: null, total: results.length, completed: results.length };
     } catch (error) {
-      state.inlineHealth = { status: "error", category: state.activeCategory, results: [], message: error.message };
+      state.inlineHealth = { status: "error", category: state.activeCategory, results: [], currentModel: null, total: 0, completed: 0, message: error.message };
     } finally {
       button.disabled = false;
-      renderHealthToolCard();
+      renderModels();
     }
   });
   el("runHealthCheckButton").addEventListener("click", async () => {

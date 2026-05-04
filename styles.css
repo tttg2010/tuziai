@@ -273,6 +273,12 @@ button { cursor: pointer; }
   border-radius: 8px;
   background: transparent;
 }
+.model-card.health-running,
+.model-card.health-ok,
+.model-card.health-unknown,
+.model-card.health-fail {
+  padding-bottom: 7px;
+}
 
 .tool-card {
   display: grid;
@@ -341,6 +347,51 @@ button { cursor: pointer; }
 .model-card.active {
   border-color: rgba(9, 216, 247, .45);
   background: rgba(9, 216, 247, .13);
+}
+.model-card.health-ok {
+  border-color: rgba(22, 217, 145, .38);
+}
+.model-card.health-unknown {
+  border-color: rgba(255, 217, 94, .48);
+}
+.model-card.health-fail {
+  border-color: rgba(255, 84, 93, .58);
+}
+.model-card.health-running {
+  border-color: rgba(9, 216, 247, .65);
+}
+.model-health-progress {
+  grid-column: 1 / -1;
+  height: 6px;
+  margin: -2px 2px 0;
+  overflow: hidden;
+  border-radius: 999px;
+  color: #343a45;
+  font-size: 18px;
+  line-height: 4px;
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+.model-health-progress.pending {
+  color: #2b303a;
+}
+.model-health-progress.running {
+  color: #09d8f7;
+  animation: progressDots 820ms linear infinite;
+  text-shadow: 0 0 10px rgba(9,216,247,.5);
+}
+.model-health-progress.ok {
+  color: #16d991;
+}
+.model-health-progress.unknown {
+  color: #ffd95e;
+}
+.model-health-progress.fail {
+  color: #ff545d;
+}
+@keyframes progressDots {
+  from { transform: translateX(-12px); }
+  to { transform: translateX(8px); }
 }
 
 .logo {
