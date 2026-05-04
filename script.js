@@ -329,6 +329,37 @@ async function apiFetch(path, options = {}) {
   return fetch(`${state.config.baseUrl}${path}`, { ...options, headers });
 }
 
+async function buildApiErrorMessage(response, action) {
+  const detail = await readErrorDetail(response);
+  const suffix = detail ? `；接口返回：${detail}` : "";
+  const messages = {
+    400: `${action}失败：请求参数不符合接口要求，请检查提示词、尺寸、时长和参考图设置${suffix}`,
+    401: `${action}失败：API Key 无效、已过期或没有正确带上 Bearer Token，请在设置里重新填写令牌${suffix}`,
+    403: `${action}失败：当前令牌或分组没有访问该模型的权限，请检查账号分组是否支持 ${state.selectedModel.name}${suffix}`,
+    404: `${action}失败：接口路径或模型名称未找到，请检查当前模型配置${suffix}`,
+    429: `${action}失败：请求过于频繁、额度不足或并发受限，请稍后重试${suffix}`,
+    500: `${action}失败：服务端异常，请稍后重试${suffix}`,
+    502: `${action}失败：上游模型服务暂时不可用${suffix}`,
+    503: `${action}失败：模型服务暂时不可用，可能是线路拥堵、模型维护或当前分组不可用${suffix}`
+  };
+  return messages[response.status] || `${action}失败：HTTP ${response.status}${suffix}`;
+}
+
+async function readErrorDetail(response) {
+  try {
+    const text = await response.text();
+    if (!text) return "";
+    try {
+      const data = JSON.parse(text);
+      return String(data.error?.message || data.message || data.error || text).slice(0, 180);
+    } catch {
+      return text.slice(0, 180);
+    }
+  } catch {
+    return "";
+  }
+}
+
 function finalPrice(model) {
   return Number((Number(model.price || model.model_price || 0) * Number(model.ratio || 1)).toFixed(4));
 }
@@ -1273,7 +1304,7 @@ async function createVideoTask() {
     if (remixId) form.set("remix_id", remixId);
     Array.from(files).forEach((file) => form.append("input_reference", file));
     const response = await apiFetch("/v1/videos", { method: "POST", body: form });
-    if (!response.ok) throw new Error(`创建失败：${response.status}`);
+    if (!response.ok) throw new Error(await buildApiErrorMessage(response, "视频创建"));
     return response.json();
   }
 
@@ -1288,7 +1319,7 @@ async function createVideoTask() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
-  if (!response.ok) throw new Error(`创建失败：${response.status}`);
+  if (!response.ok) throw new Error(await buildApiErrorMessage(response, "视频创建"));
   return response.json();
 }
 
@@ -1307,7 +1338,7 @@ async function createChatCompletion() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model: state.selectedModel.name, messages })
   });
-  if (!response.ok) throw new Error(getChatErrorMessage(response.status));
+  if (!response.ok) throw new Error(await buildApiErrorMessage(response, "聊天调用"));
   return response.json();
 }
 
@@ -1539,7 +1570,7 @@ async function createNanoBananaImage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    if (!response.ok) throw new Error(`图片生成失败：${response.status}`);
+    if (!response.ok) throw new Error(await buildApiErrorMessage(response, "图片生成"));
     return normalizeImageResponse(await response.json(), model);
   }
 
@@ -1554,7 +1585,7 @@ async function createNanoBananaImage() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
-  if (!response.ok) throw new Error(`图片生成失败：${response.status}`);
+  if (!response.ok) throw new Error(await buildApiErrorMessage(response, "图片生成"));
   return normalizeImageResponse(await response.json(), model);
 }
 
@@ -1574,7 +1605,7 @@ async function createGeminiBananaImage(model, prompt, imageUrls) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
-  if (!response.ok) throw new Error(`Gemini 图片生成失败：${response.status}`);
+  if (!response.ok) throw new Error(await buildApiErrorMessage(response, "Gemini 图片生成"));
   return normalizeImageResponse(await response.json(), model);
 }
 
@@ -1624,7 +1655,7 @@ async function pollTask(taskId) {
   const tick = async () => {
     try {
       const response = await apiFetch(`/v1/videos/${taskId}`, { headers: { "Content-Type": "application/json" } });
-      if (!response.ok) throw new Error(`查询失败：${response.status}`);
+      if (!response.ok) throw new Error(await buildApiErrorMessage(response, "视频查询"));
       const payload = await response.json();
       state.tasks = state.tasks.map((task) => task.id === taskId ? { ...task, ...payload } : task);
       renderTasks();

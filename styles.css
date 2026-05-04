@@ -362,18 +362,21 @@ button { cursor: pointer; }
 }
 .model-health-progress {
   grid-column: 1 / -1;
-  height: 6px;
-  margin: -2px 2px 0;
+  height: 14px;
+  margin: 0 2px -1px;
   overflow: hidden;
   border-radius: 999px;
   color: #343a45;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 18px;
-  line-height: 4px;
-  letter-spacing: 2px;
+  font-weight: 900;
+  line-height: 10px;
+  letter-spacing: 3px;
   white-space: nowrap;
+  text-align: left;
 }
 .model-health-progress.pending {
-  color: #2b303a;
+  color: #3a4050;
 }
 .model-health-progress.running {
   color: #09d8f7;
