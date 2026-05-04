@@ -276,7 +276,7 @@ button { cursor: pointer; }
 
 .tool-card {
   display: grid;
-  grid-template-columns: 34px 1fr;
+  grid-template-columns: 34px 1fr auto;
   gap: 8px;
   align-items: center;
   margin-top: 8px;
@@ -297,6 +297,46 @@ button { cursor: pointer; }
 }
 .tool-card strong { font-size: 12px; }
 .tool-card small { color: #8e99aa; font-size: 10px; }
+.health-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  justify-self: center;
+  background: #333946;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.04);
+}
+.health-dot.ok {
+  background: #16d991;
+  box-shadow: 0 0 0 4px rgba(22,217,145,.12), 0 0 14px rgba(22,217,145,.45);
+}
+.health-dot.unknown {
+  background: #ffd95e;
+  box-shadow: 0 0 0 4px rgba(255,217,94,.12), 0 0 14px rgba(255,217,94,.38);
+}
+.health-dot.fail {
+  background: #ff545d;
+  box-shadow: 0 0 0 4px rgba(255,84,93,.13), 0 0 14px rgba(255,84,93,.42);
+}
+.health-dot.checking {
+  background: #09d8f7;
+  animation: healthPulse 1s ease-in-out infinite;
+}
+@keyframes healthPulse {
+  0%, 100% { opacity: .45; transform: scale(.86); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+.tool-card.checking {
+  opacity: .82;
+}
+.tool-card.is-ok {
+  border-color: rgba(22, 217, 145, .45);
+}
+.tool-card.has-unknown {
+  border-color: rgba(255, 217, 94, .56);
+}
+.tool-card.has-fail {
+  border-color: rgba(255, 115, 121, .7);
+}
 
 .model-card.active {
   border-color: rgba(9, 216, 247, .45);
@@ -1677,7 +1717,7 @@ dialog {
 }
 .health-settings {
   display: grid;
-  grid-template-columns: minmax(230px, 1fr) 190px auto auto;
+  grid-template-columns: minmax(230px, 1fr) 160px auto auto;
   gap: 10px;
   align-items: end;
 }
@@ -1695,6 +1735,17 @@ dialog {
 }
 #removeFailedModulesButton {
   background: #5a2025;
+}
+.fixed-health-line {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid #30333d;
+  border-radius: 8px;
+  color: #eef3ff;
+  background: #1a1c22;
+  font-weight: 800;
 }
 .health-summary {
   display: grid;

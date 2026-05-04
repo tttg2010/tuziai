@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>兔子AI 工作台</title>
-    <link rel="stylesheet" href="./styles.css?v=20260505-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260505-2" />
   </head>
   <body>
     <div class="app-shell">
@@ -283,11 +283,9 @@
           <button value="cancel">×</button>
         </header>
         <label>
-          <span>线路地址</span>
+          <span>线路</span>
           <select id="apiBaseUrl">
-            <option value="https://api.yijiarj.cn">国内线路（大带宽）</option>
-            <option value="https://apius.yijiarj.cn">美国线路（大带宽）</option>
-            <option value="https://ai.yijiarj.cn">国内线路（小带宽）</option>
+            <option value="domestic-large">国内线路（大带宽）</option>
           </select>
         </label>
         <label>
@@ -335,10 +333,7 @@
           </label>
           <label>
             <span>检测线路</span>
-            <select id="modalHealthBaseMode">
-              <option value="current">当前设置线路</option>
-              <option value="all">三条线路全部检测</option>
-            </select>
+            <div class="fixed-health-line">国内大带宽</div>
           </label>
           <button id="runHealthCheckButton" type="button">开始检测</button>
           <button id="removeFailedModulesButton" type="button" disabled>删除失败模块</button>
@@ -349,6 +344,6 @@
     </dialog>
 
     <script src="./youmind-prompts.js?v=20260505-1"></script>
-    <script src="./script.js?v=20260505-1"></script>
+    <script src="./script.js?v=20260505-2"></script>
   </body>
 </html>

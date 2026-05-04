@@ -2,6 +2,7 @@ const API_CONFIG_KEY = "lingyu-api-config";
 const REMOVED_MODULES_KEY = "tuzi-removed-modules";
 const SAVED_TASKS_KEY = "tuzi-saved-results";
 const SAVED_DRAGGED_ITEMS_KEY = "tuzi-dragged-items";
+const PRIMARY_API_BASE_URL = "https://api.yijiarj.cn";
 
 const fallbackModels = [
   { name: "veo_3_1-fast", description: "视频生成 · 任务轮询 · 画布工作流", category: "video", tags: "视频", price: 0.19, ratio: 1, group: "default" },
@@ -249,6 +250,7 @@ let state = {
   previewItem: null,
   preview: { scale: 1, x: 0, y: 0 },
   lastHealthResults: [],
+  inlineHealth: { status: "idle", category: null, results: [] },
   removedModules: loadRemovedModules(),
   draggedItems: loadSavedDraggedItems(),
   nodePositions: {
@@ -262,11 +264,12 @@ const el = (id) => document.getElementById(id);
 
 function loadConfig() {
   const saved = localStorage.getItem(API_CONFIG_KEY);
-  return saved ? JSON.parse(saved) : { baseUrl: "https://api.yijiarj.cn", apiKey: "" };
+  const parsed = saved ? JSON.parse(saved) : { apiKey: "" };
+  return { ...parsed, baseUrl: PRIMARY_API_BASE_URL };
 }
 
 function saveConfig() {
-  state.config = { baseUrl: el("apiBaseUrl").value, apiKey: el("apiKey").value.trim() };
+  state.config = { baseUrl: PRIMARY_API_BASE_URL, apiKey: el("apiKey").value.trim() };
   localStorage.setItem(API_CONFIG_KEY, JSON.stringify(state.config));
 }
 
@@ -369,6 +372,7 @@ function getModelCategory(item) {
 }
 
 function renderModels() {
+  renderHealthToolCard();
   const query = el("modelSearch").value.trim().toLowerCase();
   const list = state.models
     .filter((model) => !isSoraModel(model))
@@ -388,6 +392,47 @@ function renderModels() {
   if (!list.length) {
     el("modelList").innerHTML = `<div class="empty-list">当前分类暂无可用模块</div>`;
   }
+}
+
+function renderHealthToolCard() {
+  const button = el("healthToolButton");
+  if (!button) return;
+  const status = state.inlineHealth.status;
+  const results = state.inlineHealth.results || [];
+  const okCount = results.filter((item) => item.ok).length;
+  const unknownCount = results.filter((item) => item.indeterminate).length;
+  const failCount = results.filter((item) => !item.ok && !item.indeterminate).length;
+  const total = results.length;
+  const label = getHealthCategoryLabel(state.activeCategory);
+  const small = `点击检查${label}模块`;
+  let dotClass = "idle";
+  let dotLabel = "待检测";
+  if (status === "running") {
+    dotClass = "checking";
+    dotLabel = "检测中";
+  } else if (status === "done") {
+    dotClass = failCount ? "fail" : unknownCount ? "unknown" : "ok";
+    dotLabel = failCount ? "异常" : unknownCount ? "未确认" : "正常";
+  } else if (status === "error") {
+    dotClass = "fail";
+    dotLabel = "错误";
+  }
+  button.className = `tool-card health-inline ${status === "running" ? "checking" : ""} ${status === "done" ? (failCount ? "has-fail" : unknownCount ? "has-unknown" : "is-ok") : ""} ${status === "error" ? "has-fail" : ""}`;
+  button.innerHTML = `
+    <span class="logo brand-system"><span>API</span></span>
+    <span>
+      <strong>功能模块检测</strong>
+      <small>${escapeHtml(small)}</small>
+    </span>
+    <i class="health-dot ${dotClass}" aria-label="${escapeHtml(dotLabel)}"></i>
+  `;
+}
+
+function getHealthCategoryLabel(category) {
+  if (category === "video") return "视频";
+  if (category === "image") return "图片";
+  if (category === "chat") return "聊天";
+  return "全部";
 }
 
 function formatModelTitle(name) {
@@ -1296,15 +1341,28 @@ async function createFeatureTask() {
 async function runHealthChecks() {
   const selected = Array.from(document.querySelectorAll('input[name="modalHealthCheck"]:checked')).map((input) => input.value);
   if (!selected.length) throw new Error("请至少选择一个检测项目");
-  const bases = el("modalHealthBaseMode").value === "all"
-    ? ["https://api.yijiarj.cn", "https://apius.yijiarj.cn", "https://ai.yijiarj.cn"]
-    : [state.config.baseUrl];
+  const bases = [PRIMARY_API_BASE_URL];
   const checks = [];
   bases.forEach((baseUrl) => {
     getModelsForHealthCheck(selected).forEach((model) => checks.push(runModuleHealthCheck(model, baseUrl)));
   });
   const results = await Promise.all(checks);
   return results;
+}
+
+async function runInlineHealthCheck() {
+  const models = getModelsForInlineHealthCheck();
+  if (!models.length) throw new Error("当前分类没有可检测模块");
+  const results = await Promise.all(models.map((model) => runModuleHealthCheck(model, PRIMARY_API_BASE_URL)));
+  state.lastHealthResults = results;
+  return results;
+}
+
+function getModelsForInlineHealthCheck() {
+  return state.models
+    .filter((model) => !isSoraModel(model))
+    .filter((model) => !state.removedModules.includes(model.name))
+    .filter((model) => state.activeCategory === "all" || model.category === state.activeCategory);
 }
 
 function getModelsForHealthCheck(selected) {
@@ -1362,9 +1420,7 @@ async function runModuleHealthCheck(model, baseUrl) {
 
 function getBaseLabel(baseUrl) {
   const labels = {
-    "https://api.yijiarj.cn": "国内大带宽",
-    "https://apius.yijiarj.cn": "美国大带宽",
-    "https://ai.yijiarj.cn": "国内小带宽"
+    [PRIMARY_API_BASE_URL]: "国内大带宽"
   };
   return labels[baseUrl] || "当前线路";
 }
@@ -1612,7 +1668,6 @@ function bindEvents() {
     el("prompt").focus();
   }
   el("openConfig").addEventListener("click", () => {
-    el("apiBaseUrl").value = state.config.baseUrl;
     el("apiKey").value = state.config.apiKey;
     el("configDialog").showModal();
   });
@@ -1639,9 +1694,20 @@ function bindEvents() {
   });
 
   el("modelSearch").addEventListener("input", renderModels);
-  el("healthToolButton").addEventListener("click", () => {
-    renderHealthDialog([]);
-    el("healthDialog").showModal();
+  el("healthToolButton").addEventListener("click", async () => {
+    const button = el("healthToolButton");
+    button.disabled = true;
+    state.inlineHealth = { status: "running", category: state.activeCategory, results: [] };
+    renderHealthToolCard();
+    try {
+      const results = await runInlineHealthCheck();
+      state.inlineHealth = { status: "done", category: state.activeCategory, results };
+    } catch (error) {
+      state.inlineHealth = { status: "error", category: state.activeCategory, results: [], message: error.message };
+    } finally {
+      button.disabled = false;
+      renderHealthToolCard();
+    }
   });
   el("runHealthCheckButton").addEventListener("click", async () => {
     const button = el("runHealthCheckButton");
