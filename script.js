@@ -923,8 +923,12 @@ function renderTasks() {
       </button>`;
     }).join("");
 
-  const videos = state.selectedModel.category === "video" ? state.tasks.filter((task) => task.url) : [];
-  const images = state.selectedModel.category === "image" ? state.tasks.filter((task) => task.imageUrl) : [];
+  const videos = state.selectedModel.category === "video"
+    ? state.tasks.filter((task) => (task.kind || inferTaskKind(task)) === "video")
+    : [];
+  const images = state.selectedModel.category === "image"
+    ? state.tasks.filter((task) => (task.kind || inferTaskKind(task)) === "image")
+    : [];
   const chats = state.selectedModel.category === "chat" ? state.tasks.filter((task) => task.answer) : [];
   el("videoResultGrid").innerHTML = renderMediaResults(videos, "video");
   el("imageResultGrid").innerHTML = renderMediaResults(images, "image");
@@ -970,8 +974,9 @@ function renderMediaResults(items, kind) {
     return Array.from({ length: 4 }, () => `<div class="result-tile"><span class="empty-result">空</span></div>`).join("");
   }
   return items.map((task) => `
-    <div class="result-tile draggable-data ${state.selectedCanvasItem === task.id ? "selected" : ""}" role="button" tabindex="0" data-task-id="${task.id}" data-preview-id="${task.id}">
+    <div class="result-tile draggable-data ${getTaskStatus(task).className} ${state.selectedCanvasItem === task.id ? "selected" : ""}" role="button" tabindex="0" data-task-id="${task.id}" data-preview-id="${task.id}">
       ${renderResultPreview(task)}
+      ${renderResultStatus(task)}
       <span class="media-actions">
         <button type="button" data-download-id="${task.id}">下载</button>
       </span>
@@ -995,7 +1000,16 @@ function renderResultPreview(task) {
   if (task.url) return `<video src="${task.url}" controls></video>`;
   if (task.imageUrl) return `<img src="${task.imageUrl}" alt="生成图片" />`;
   if (task.answer) return `<span class="text-result">${escapeHtml(task.answer)}</span>`;
-  return `<span class="empty-result">已完成<br>等待地址</span>`;
+  const status = getTaskStatus(task);
+  return `<span class="empty-result">${escapeHtml(status.label)}<br>${escapeHtml(status.detail)}</span>`;
+}
+
+function renderResultStatus(task) {
+  const status = getTaskStatus(task);
+  return `
+    <span class="result-status ${status.className}">${escapeHtml(status.label)}</span>
+    <span class="result-progress"><span style="width:${status.progress}%"></span></span>
+  `;
 }
 
 function escapeHtml(value) {

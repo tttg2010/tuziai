@@ -1565,6 +1565,71 @@ select, input[type="password"] { height: 40px; padding: 0 11px; }
   overflow: hidden;
   background: #080a0e;
 }
+.history-card-workspace .result-tile.queued {
+  border-color: rgba(255, 217, 94, .5);
+}
+.history-card-workspace .result-tile.processing {
+  border-color: rgba(9, 216, 247, .58);
+}
+.history-card-workspace .result-tile.completed {
+  border-color: rgba(22, 217, 145, .52);
+}
+.history-card-workspace .result-tile.error {
+  border-color: rgba(255, 84, 93, .72);
+}
+.result-status {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  z-index: 2;
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: #091015;
+  background: #8e99aa;
+  font-size: 10px;
+  font-weight: 900;
+}
+.result-status.queued {
+  background: #ffd95e;
+}
+.result-status.processing {
+  color: #031116;
+  background: #09d8f7;
+}
+.result-status.completed {
+  background: #16d991;
+}
+.result-status.error {
+  color: white;
+  background: #d5343d;
+}
+.result-progress {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,.12);
+}
+.result-progress span {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: inherit;
+  background: var(--cyan);
+}
+.result-tile.queued .result-progress span {
+  background: #ffd95e;
+}
+.result-tile.completed .result-progress span {
+  background: #16d991;
+}
+.result-tile.error .result-progress span {
+  background: #ff545d;
+}
 .result-empty-card {
   display: grid;
   place-items: center;
