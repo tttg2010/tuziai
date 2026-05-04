@@ -1462,27 +1462,34 @@ function getModelsForHealthCheck(selected) {
 async function runModuleHealthCheck(model, baseUrl) {
   const spec = getModuleEndpointSpec(model);
   const endpoint = `${getBaseLabel(baseUrl)} · ${spec.method} ${spec.endpoint}`;
-  const previousBase = state.config.baseUrl;
-  try {
-    state.config.baseUrl = baseUrl;
-    const response = await apiFetch("/api/pricing");
-    state.config.baseUrl = previousBase;
-    const pricingOk = response.ok;
-    const confirmedFailure = pricingOk && !spec.ready;
+  if (!spec.ready) {
     return {
-      ok: pricingOk && spec.ready,
-      removable: confirmedFailure,
-      indeterminate: !pricingOk,
+      ok: false,
+      removable: true,
+      indeterminate: false,
       type: model.category,
       label: model.name,
       modelName: model.name,
       endpoint,
-      detail: pricingOk
-        ? `${spec.detail}；鉴权/价格接口 HTTP ${response.status}`
-        : `线路鉴权未通过，无法确认模块状态：HTTP ${response.status}`
+      detail: spec.detail
+    };
+  }
+  try {
+    const response = await probeModuleEndpoint(baseUrl, spec);
+    const reachable = isReachableProbeStatus(response.status);
+    return {
+      ok: reachable,
+      removable: !reachable,
+      indeterminate: false,
+      type: model.category,
+      label: model.name,
+      modelName: model.name,
+      endpoint,
+      detail: reachable
+        ? `${spec.detail}；接口探测 HTTP ${response.status}，未携带令牌，不会创建任务`
+        : `${spec.detail}；接口探测 HTTP ${response.status}`
     };
   } catch (error) {
-    state.config.baseUrl = previousBase;
     return {
       ok: false,
       removable: false,
@@ -1496,6 +1503,18 @@ async function runModuleHealthCheck(model, baseUrl) {
         : `${error.message}；未确认模块失败`
     };
   }
+}
+
+function probeModuleEndpoint(baseUrl, spec) {
+  return fetch(`${baseUrl}${spec.endpoint}`, {
+    method: spec.method,
+    headers: { "Content-Type": "application/json" },
+    body: spec.method === "POST" ? "{}" : undefined
+  });
+}
+
+function isReachableProbeStatus(status) {
+  return [200, 400, 401, 403, 422, 429].includes(status);
 }
 
 function getBaseLabel(baseUrl) {
