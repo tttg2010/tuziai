@@ -239,6 +239,7 @@ let state = {
   galleryFilter: "all",
   galleryTag: "全部",
   galleryDetailId: null,
+  galleryPreviewId: null,
   externalPrompts: Array.isArray(window.YOUMIND_PROMPTS) ? window.YOUMIND_PROMPTS : [],
   size: "720x1280",
   count: 1,
@@ -531,13 +532,10 @@ function renderGallery() {
     return;
   }
   el("galleryMasonry").innerHTML = items.map((item) => `
-    <article class="gallery-card ${item.sourceType === "抓取" ? "scraped" : "system"}" data-gallery-id="${escapeHtml(item.id)}" tabindex="0" role="button" aria-label="查看 ${escapeHtml(item.title)} 详情">
+    <article class="gallery-card ${item.sourceType === "抓取" ? "scraped" : "system"}" data-gallery-id="${escapeHtml(item.id)}" tabindex="0" role="button" aria-label="预览 ${escapeHtml(item.title)}">
       <div class="gallery-card-media">
         ${item.type === "video" ? `<video src="${item.url}" controls muted></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
-        <span class="gallery-open-cue">查看详情</span>
-        <div class="gallery-hover-preview" aria-hidden="true">
-          ${item.type === "video" ? `<video src="${item.url}" muted autoplay loop playsinline></video>` : `<img src="${item.url}" alt="" />`}
-        </div>
+        <span class="gallery-open-cue">点击预览</span>
       </div>
       <div class="gallery-card-body">
         <div class="gallery-card-meta">
@@ -611,6 +609,43 @@ function renderGalleryDetail() {
       </div>
     </article>
   `;
+}
+
+function openGalleryPreview(itemId) {
+  const item = getRawGalleryItems().find((entry) => entry.id === itemId);
+  if (!item) return;
+  state.galleryPreviewId = itemId;
+  const overlay = el("galleryPreviewOverlay");
+  overlay.innerHTML = `
+    <div class="gallery-preview-backdrop" data-preview-close="true"></div>
+    <div class="gallery-preview-window" role="dialog" aria-label="${escapeHtml(item.title)} 预览">
+      <button type="button" class="gallery-preview-close" data-preview-close="true" aria-label="关闭预览">×</button>
+      <div class="gallery-preview-media" data-preview-detail="${escapeHtml(item.id)}" title="点击进入详情页">
+        ${item.type === "video" ? `<video src="${item.url}" controls autoplay muted playsinline></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
+      </div>
+      <div class="gallery-preview-caption">
+        <strong>${escapeHtml(item.title)}</strong>
+        <span>再次点击图片进入详情页</span>
+      </div>
+    </div>
+  `;
+  overlay.classList.remove("hidden");
+  overlay.setAttribute("aria-hidden", "false");
+}
+
+function closeGalleryPreview() {
+  state.galleryPreviewId = null;
+  const overlay = el("galleryPreviewOverlay");
+  overlay.classList.add("hidden");
+  overlay.setAttribute("aria-hidden", "true");
+  overlay.innerHTML = "";
+}
+
+function openGalleryDetail(itemId) {
+  closeGalleryPreview();
+  state.galleryDetailId = itemId;
+  renderGallery();
+  el("galleryPanel").scrollTop = 0;
 }
 
 function getGalleryItems() {
@@ -1492,6 +1527,7 @@ function bindEvents() {
     if (!tagButton) return;
     state.galleryTag = tagButton.dataset.squareTag;
     state.galleryDetailId = null;
+    closeGalleryPreview();
     renderSquareFilters();
     renderGallery();
   });
@@ -1500,6 +1536,7 @@ function bindEvents() {
       state.galleryFilter = button.dataset.galleryFilter;
       state.galleryTag = "全部";
       state.galleryDetailId = null;
+      closeGalleryPreview();
       document.querySelectorAll(".gallery-tab").forEach((item) => item.classList.toggle("active", item === button));
       renderSquareFilters();
       renderGallery();
@@ -1518,18 +1555,25 @@ function bindEvents() {
     if (event.target.closest("a")) return;
     const card = event.target.closest("[data-gallery-id]");
     if (!card) return;
-    state.galleryDetailId = card.dataset.galleryId;
-    renderGallery();
-    el("galleryPanel").scrollTop = 0;
+    openGalleryPreview(card.dataset.galleryId);
   });
   el("galleryMasonry").addEventListener("keydown", (event) => {
     if (!["Enter", " "].includes(event.key)) return;
     const card = event.target.closest("[data-gallery-id]");
     if (!card) return;
     event.preventDefault();
-    state.galleryDetailId = card.dataset.galleryId;
-    renderGallery();
-    el("galleryPanel").scrollTop = 0;
+    openGalleryPreview(card.dataset.galleryId);
+  });
+  el("galleryPreviewOverlay").addEventListener("click", (event) => {
+    const detailTarget = event.target.closest("[data-preview-detail]");
+    if (detailTarget) {
+      openGalleryDetail(detailTarget.dataset.previewDetail);
+      return;
+    }
+    if (event.target.closest("[data-preview-close]")) closeGalleryPreview();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && state.galleryPreviewId) closeGalleryPreview();
   });
   el("galleryDetail").addEventListener("click", (event) => {
     if (event.target.closest("#detailBack")) {
