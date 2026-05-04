@@ -745,17 +745,17 @@ function renderRoleAvatars() {
 
 function renderWorkspaceForFeature() {
   const category = state.selectedModel.category;
-  el("canvasWorkspace").classList.toggle("history-card-workspace", category === "video");
+  el("canvasWorkspace").classList.toggle("history-card-workspace", ["video", "image"].includes(category));
   const resultNode = document.querySelector(".result-node");
   resultNode.classList.toggle("video-workspace", category === "video");
   resultNode.classList.toggle("image-workspace", category === "image");
   resultNode.classList.toggle("chat-workspace", category === "chat");
   document.querySelector(".source-node").classList.toggle("chat-workspace", category === "chat");
   document.querySelector("#videoResultGrid").closest("section").classList.toggle("hidden", category !== "video");
-  document.querySelector("#imageResultGrid").closest("section").classList.toggle("hidden", !["video", "image"].includes(category));
+  document.querySelector("#imageResultGrid").closest("section").classList.toggle("hidden", category !== "image");
   document.querySelector("#chatResultGrid").closest("section").classList.toggle("hidden", category !== "chat");
   el("downloadVideos").classList.toggle("hidden", category !== "video");
-  el("downloadImages").classList.toggle("hidden", !["video", "image"].includes(category));
+  el("downloadImages").classList.toggle("hidden", category !== "image");
   renderTasks();
 }
 
@@ -816,7 +816,7 @@ function renderTasks() {
     }).join("");
 
   const videos = state.selectedModel.category === "video" ? state.tasks.filter((task) => task.url) : [];
-  const images = ["video", "image"].includes(state.selectedModel.category) ? state.tasks.filter((task) => task.imageUrl) : [];
+  const images = state.selectedModel.category === "image" ? state.tasks.filter((task) => task.imageUrl) : [];
   const chats = state.selectedModel.category === "chat" ? state.tasks.filter((task) => task.answer) : [];
   el("videoResultGrid").innerHTML = renderMediaResults(videos, "video");
   el("imageResultGrid").innerHTML = renderMediaResults(images, "image");

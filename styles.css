@@ -1412,8 +1412,9 @@ select, input[type="password"] { height: 40px; padding: 0 11px; }
 .result-node.image-workspace .result-columns {
   grid-template-columns: 1fr;
 }
-.history-card-workspace .result-node.video-workspace .result-columns {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+.history-card-workspace .result-node.video-workspace .result-columns,
+.history-card-workspace .result-node.image-workspace .result-columns {
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   padding: 14px 0 0;
 }
