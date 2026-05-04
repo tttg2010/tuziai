@@ -1565,6 +1565,44 @@ select, input[type="password"] { height: 40px; padding: 0 11px; }
   overflow: hidden;
   background: #080a0e;
 }
+.history-card-workspace .result-tile video.history-video-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #05070a;
+}
+.video-preview-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,.35), transparent 36%, rgba(0,0,0,.5));
+  opacity: .82;
+}
+.video-preview-tile:hover video.history-video-preview {
+  transform: scale(1.035);
+  transition: transform .25s ease;
+}
+.video-mute-toggle {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 4;
+  min-width: 42px;
+  padding: 4px 7px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  color: #eef3ff;
+  background: rgba(7, 9, 13, .72);
+  backdrop-filter: blur(8px);
+  font-size: 10px;
+  font-weight: 900;
+}
+.video-mute-toggle:hover {
+  border-color: rgba(9,216,247,.6);
+  color: var(--cyan);
+}
 .history-card-workspace .result-tile.queued {
   border-color: rgba(255, 217, 94, .5);
 }
@@ -1581,7 +1619,7 @@ select, input[type="password"] { height: 40px; padding: 0 11px; }
   position: absolute;
   top: 7px;
   left: 7px;
-  z-index: 2;
+  z-index: 3;
   padding: 3px 6px;
   border-radius: 999px;
   color: #091015;
@@ -1608,7 +1646,7 @@ select, input[type="password"] { height: 40px; padding: 0 11px; }
   left: 8px;
   right: 8px;
   bottom: 8px;
-  z-index: 2;
+  z-index: 3;
   height: 4px;
   border-radius: 999px;
   overflow: hidden;
@@ -1629,6 +1667,13 @@ select, input[type="password"] { height: 40px; padding: 0 11px; }
 }
 .result-tile.error .result-progress span {
   background: #ff545d;
+}
+.media-actions {
+  z-index: 4;
+}
+.media-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
 }
 .result-empty-card {
   display: grid;

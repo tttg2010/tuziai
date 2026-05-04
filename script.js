@@ -249,6 +249,7 @@ let state = {
   selectedCanvasItem: null,
   previewItem: null,
   preview: { scale: 1, x: 0, y: 0 },
+  historyVideoMuted: true,
   lastHealthResults: [],
   inlineHealth: { status: "idle", category: null, results: [], currentModel: null, total: 0, completed: 0 },
   removedModules: loadRemovedModules(),
@@ -974,11 +975,12 @@ function renderMediaResults(items, kind) {
     return Array.from({ length: 4 }, () => `<div class="result-tile"><span class="empty-result">空</span></div>`).join("");
   }
   return items.map((task) => `
-    <div class="result-tile draggable-data ${getTaskStatus(task).className} ${state.selectedCanvasItem === task.id ? "selected" : ""}" role="button" tabindex="0" data-task-id="${task.id}" data-preview-id="${task.id}">
+    <div class="result-tile draggable-data ${task.url ? "video-preview-tile" : ""} ${getTaskStatus(task).className} ${state.selectedCanvasItem === task.id ? "selected" : ""}" role="button" tabindex="0" data-task-id="${task.id}" data-preview-id="${task.id}">
       ${renderResultPreview(task)}
       ${renderResultStatus(task)}
+      ${task.url ? renderVideoMuteButton() : ""}
       <span class="media-actions">
-        <button type="button" data-download-id="${task.id}">下载</button>
+        <button type="button" data-download-id="${task.id}" ${task.url || task.imageUrl ? "" : "disabled"}>下载</button>
       </span>
     </div>
   `).join("");
@@ -997,11 +999,15 @@ function renderChatResults(items) {
 
 
 function renderResultPreview(task) {
-  if (task.url) return `<video src="${task.url}" controls></video>`;
+  if (task.url) return `<video class="history-video-preview" src="${task.url}" preload="metadata" playsinline ${state.historyVideoMuted ? "muted" : ""}></video>`;
   if (task.imageUrl) return `<img src="${task.imageUrl}" alt="生成图片" />`;
   if (task.answer) return `<span class="text-result">${escapeHtml(task.answer)}</span>`;
   const status = getTaskStatus(task);
   return `<span class="empty-result">${escapeHtml(status.label)}<br>${escapeHtml(status.detail)}</span>`;
+}
+
+function renderVideoMuteButton() {
+  return `<button class="video-mute-toggle" type="button" data-toggle-video-muted aria-label="${state.historyVideoMuted ? "取消静音" : "静音"}">${state.historyVideoMuted ? "静音" : "有声"}</button>`;
 }
 
 function renderResultStatus(task) {
@@ -1916,6 +1922,8 @@ function bindEvents() {
   el("videoResultGrid").addEventListener("click", handleResultClick);
   el("imageResultGrid").addEventListener("click", handleResultClick);
   el("chatResultGrid").addEventListener("click", handleResultClick);
+  el("videoResultGrid").addEventListener("pointerover", handleHistoryVideoHover);
+  el("videoResultGrid").addEventListener("pointerout", handleHistoryVideoLeave);
   el("previewZoomIn").addEventListener("click", () => zoomPreview(1.2));
   el("previewZoomOut").addEventListener("click", () => zoomPreview(1 / 1.2));
   el("previewZoomReset").addEventListener("click", resetPreviewZoom);
@@ -2021,6 +2029,13 @@ function getRemainingFailedModuleNames(results) {
 }
 
 function handleResultClick(event) {
+  const muteButton = event.target.closest("[data-toggle-video-muted]");
+  if (muteButton) {
+    event.stopPropagation();
+    state.historyVideoMuted = !state.historyVideoMuted;
+    renderTasks();
+    return;
+  }
   const downloadButton = event.target.closest("[data-download-id]");
   if (downloadButton) {
     event.stopPropagation();
@@ -2032,6 +2047,30 @@ function handleResultClick(event) {
   if (!tile) return;
   const task = state.tasks.find((item) => item.id === tile.dataset.previewId);
   if (task) openPreview(task);
+}
+
+function handleHistoryVideoHover(event) {
+  const tile = event.target.closest(".video-preview-tile");
+  if (!tile || !event.currentTarget.contains(tile)) return;
+  if (event.relatedTarget && tile.contains(event.relatedTarget)) return;
+  const video = tile.querySelector("video");
+  if (!video) return;
+  video.muted = state.historyVideoMuted;
+  video.play().catch(() => {});
+}
+
+function handleHistoryVideoLeave(event) {
+  const tile = event.target.closest(".video-preview-tile");
+  if (!tile || !event.currentTarget.contains(tile)) return;
+  if (event.relatedTarget && tile.contains(event.relatedTarget)) return;
+  const video = tile.querySelector("video");
+  if (!video) return;
+  video.pause();
+  try {
+    video.currentTime = 0;
+  } catch {
+    // Some remote videos do not allow seeking before metadata is ready.
+  }
 }
 
 function openPreview(task) {
