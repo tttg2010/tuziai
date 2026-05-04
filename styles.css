@@ -1653,11 +1653,15 @@ dialog {
   width: min(920px, calc(100vw - 28px));
 }
 .health-dialog {
-  width: min(760px, calc(100vw - 28px));
+  width: min(860px, calc(100vw - 28px));
+  max-height: 88vh;
+  overflow: hidden;
 }
 .health-dialog form {
   display: grid;
-  gap: 14px;
+  gap: 12px;
+  max-height: calc(88vh - 28px);
+  overflow: hidden;
 }
 .health-dialog header {
   display: flex;
@@ -1673,8 +1677,8 @@ dialog {
 }
 .health-settings {
   display: grid;
-  grid-template-columns: 1fr 180px auto auto;
-  gap: 12px;
+  grid-template-columns: minmax(230px, 1fr) 190px auto auto;
+  gap: 10px;
   align-items: end;
 }
 .health-settings button {
@@ -1694,7 +1698,7 @@ dialog {
 }
 .health-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 .summary-pill {
@@ -1713,22 +1717,24 @@ dialog {
 }
 .health-results {
   display: grid;
-  gap: 8px;
-  max-height: 44vh;
+  gap: 7px;
+  max-height: min(42vh, 420px);
   overflow: auto;
+  padding-right: 2px;
 }
 .health-row {
   display: grid;
-  grid-template-columns: 92px 1fr auto;
+  grid-template-columns: minmax(108px, 150px) 1fr auto;
   gap: 10px;
   align-items: center;
-  padding: 10px;
+  padding: 9px 10px;
   border: 1px solid #30333d;
   border-radius: 8px;
   background: #101216;
 }
 .health-row.ok { border-color: rgba(22, 217, 145, .55); }
 .health-row.fail { border-color: rgba(255, 115, 121, .7); }
+.health-row.unknown { border-color: rgba(255, 217, 94, .58); }
 .health-row.removed {
   opacity: .55;
   border-style: dashed;
@@ -1736,6 +1742,7 @@ dialog {
 .health-row b {
   color: #eef3ff;
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 .health-row p {
   margin: 2px 0 0;
@@ -1756,6 +1763,10 @@ dialog {
 .health-row.fail .health-status {
   color: white;
   background: #b3282e;
+}
+.health-row.unknown .health-status {
+  color: #201600;
+  background: #ffd95e;
 }
 .health-row.removed .health-status {
   color: #101216;

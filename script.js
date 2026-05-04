@@ -1323,30 +1323,39 @@ function getModelsForHealthCheck(selected) {
 
 async function runModuleHealthCheck(model, baseUrl) {
   const spec = getModuleEndpointSpec(model);
+  const endpoint = `${getBaseLabel(baseUrl)} · ${spec.method} ${spec.endpoint}`;
+  const previousBase = state.config.baseUrl;
   try {
-    const previousBase = state.config.baseUrl;
     state.config.baseUrl = baseUrl;
     const response = await apiFetch("/api/pricing");
     state.config.baseUrl = previousBase;
     const pricingOk = response.ok;
+    const confirmedFailure = pricingOk && !spec.ready;
     return {
       ok: pricingOk && spec.ready,
+      removable: confirmedFailure,
+      indeterminate: !pricingOk,
       type: model.category,
       label: model.name,
       modelName: model.name,
-      endpoint: `${getBaseLabel(baseUrl)} · ${spec.method} ${spec.endpoint}`,
+      endpoint,
       detail: pricingOk
         ? `${spec.detail}；鉴权/价格接口 HTTP ${response.status}`
-        : `鉴权/价格接口 HTTP ${response.status}`
+        : `线路鉴权未通过，无法确认模块状态：HTTP ${response.status}`
     };
   } catch (error) {
+    state.config.baseUrl = previousBase;
     return {
       ok: false,
+      removable: false,
+      indeterminate: true,
       type: model.category,
       label: model.name,
       modelName: model.name,
-      endpoint: `${getBaseLabel(baseUrl)} · ${spec.method} ${spec.endpoint}`,
-      detail: error.message
+      endpoint,
+      detail: error.message === "Failed to fetch"
+        ? "浏览器无法访问该线路，可能是网络、跨域或线路不可达；未确认模块失败"
+        : `${error.message}；未确认模块失败`
     };
   }
 }
@@ -1771,23 +1780,38 @@ function renderHealthDialog(results) {
     return;
   }
   const okCount = results.filter((item) => item.ok).length;
+  const unknownCount = results.filter((item) => item.indeterminate).length;
   const removedCount = results.filter((item) => state.removedModules.includes(item.modelName || item.label)).length;
   el("healthSummary").innerHTML = `
     <div class="summary-pill"><strong>${results.length}</strong><span>检测项</span></div>
     <div class="summary-pill"><strong>${okCount}</strong><span>通过</span></div>
-    <div class="summary-pill"><strong>${remainingFailed.size}</strong><span>待删除失败模块</span></div>
+    <div class="summary-pill"><strong>${unknownCount}</strong><span>未确认</span></div>
+    <div class="summary-pill"><strong>${remainingFailed.size}</strong><span>可删除失败模块</span></div>
     ${removedCount ? `<div class="summary-pill"><strong>${removedCount}</strong><span>已隐藏失败记录</span></div>` : ""}
   `;
   el("healthResults").innerHTML = results.map((item) => `
-    <div class="health-row ${item.ok ? "ok" : "fail"} ${state.removedModules.includes(item.modelName || item.label) ? "removed" : ""}">
+    <div class="health-row ${getHealthResultClass(item)} ${state.removedModules.includes(item.modelName || item.label) ? "removed" : ""}">
       <b>${escapeHtml(item.label)}</b>
       <div>
         <strong>${escapeHtml(item.endpoint)}</strong>
         <p>${escapeHtml(item.detail)}</p>
       </div>
-      <span class="health-status">${state.removedModules.includes(item.modelName || item.label) ? "已删除" : item.ok ? "通过" : "失败"}</span>
+      <span class="health-status">${getHealthResultLabel(item)}</span>
     </div>
   `).join("");
+}
+
+function getHealthResultClass(item) {
+  if (item.ok) return "ok";
+  if (item.indeterminate) return "unknown";
+  return "fail";
+}
+
+function getHealthResultLabel(item) {
+  if (state.removedModules.includes(item.modelName || item.label)) return "已删除";
+  if (item.ok) return "通过";
+  if (item.indeterminate) return "未确认";
+  return "失败";
 }
 
 function removeFailedModules() {
@@ -1811,6 +1835,7 @@ function getRemainingFailedModuleNames(results) {
   return new Set(
     results
       .filter((item) => !item.ok)
+      .filter((item) => item.removable !== false && !item.indeterminate)
       .map((item) => item.modelName || item.label)
       .filter((name) => !state.removedModules.includes(name))
   );
