@@ -745,16 +745,17 @@ function renderRoleAvatars() {
 
 function renderWorkspaceForFeature() {
   const category = state.selectedModel.category;
+  el("canvasWorkspace").classList.toggle("history-card-workspace", category === "video");
   const resultNode = document.querySelector(".result-node");
   resultNode.classList.toggle("video-workspace", category === "video");
   resultNode.classList.toggle("image-workspace", category === "image");
   resultNode.classList.toggle("chat-workspace", category === "chat");
   document.querySelector(".source-node").classList.toggle("chat-workspace", category === "chat");
   document.querySelector("#videoResultGrid").closest("section").classList.toggle("hidden", category !== "video");
-  document.querySelector("#imageResultGrid").closest("section").classList.toggle("hidden", category !== "image");
+  document.querySelector("#imageResultGrid").closest("section").classList.toggle("hidden", !["video", "image"].includes(category));
   document.querySelector("#chatResultGrid").closest("section").classList.toggle("hidden", category !== "chat");
   el("downloadVideos").classList.toggle("hidden", category !== "video");
-  el("downloadImages").classList.toggle("hidden", category !== "image");
+  el("downloadImages").classList.toggle("hidden", !["video", "image"].includes(category));
   renderTasks();
 }
 
@@ -815,7 +816,7 @@ function renderTasks() {
     }).join("");
 
   const videos = state.selectedModel.category === "video" ? state.tasks.filter((task) => task.url) : [];
-  const images = state.selectedModel.category === "image" ? state.tasks.filter((task) => task.imageUrl) : [];
+  const images = ["video", "image"].includes(state.selectedModel.category) ? state.tasks.filter((task) => task.imageUrl) : [];
   const chats = state.selectedModel.category === "chat" ? state.tasks.filter((task) => task.answer) : [];
   el("videoResultGrid").innerHTML = renderMediaResults(videos, "video");
   el("imageResultGrid").innerHTML = renderMediaResults(images, "image");
@@ -855,6 +856,9 @@ function getWorkspaceUnit() {
 
 function renderMediaResults(items, kind) {
   if (!items.length) {
+    if (state.selectedModel.category === "video") {
+      return `<div class="result-empty-card">暂无${kind === "video" ? "历史视频" : "历史图片"}<br>生成完成后会自动保存在这里</div>`;
+    }
     return Array.from({ length: 4 }, () => `<div class="result-tile"><span class="empty-result">空</span></div>`).join("");
   }
   return items.map((task) => `
