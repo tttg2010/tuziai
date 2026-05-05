@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>兔子AI 工作台</title>
-    <link rel="stylesheet" href="./styles.css?v=20260505-7" />
+    <link rel="stylesheet" href="./styles.css?v=20260505-8" />
   </head>
   <body>
     <div class="app-shell">
@@ -216,62 +216,97 @@
       </main>
       <div id="galleryPreviewOverlay" class="gallery-preview-overlay hidden" aria-hidden="true"></div>
 
-      <section id="canvasWorkspace" class="canvas-workspace" aria-label="工作区">
-        <div id="gridCanvas" class="grid-canvas">
-          <div id="canvasContent" class="canvas-content">
-            <div class="notice">
-              <span>?</span>
-              检测到您未订阅存储服务，建议订阅后获得永久存储和视频图片加速服务
-              <button>去订阅</button>
-            </div>
+      <section id="canvasWorkspace" class="canvas-workspace history-workspace-shell" aria-label="创作资产工作台">
+        <div id="gridCanvas" class="grid-canvas history-workspace-canvas">
+          <div id="canvasContent" class="canvas-content history-workspace-content">
+            <header class="workspace-banner">
+              <div class="workspace-banner-copy">
+                <div class="workspace-banner-topline">
+                  <span class="workspace-eyebrow">Workspace</span>
+                  <span class="workspace-current-model">当前模型：<b id="workspaceModelName">veo_3_1-fast</b></span>
+                </div>
+                <h2 id="workspaceHeadline">右侧创作资产栏</h2>
+                <p id="workspaceDescription">当前模型、任务状态和最近产出都会在这里持续更新。</p>
+              </div>
+              <div class="workspace-summary-inline">
+                <span class="workspace-summary-label">模式</span>
+                <strong id="workspaceModelMeta">视频创作流</strong>
+                <span class="workspace-summary-divider"></span>
+                <span class="workspace-summary-label">状态</span>
+                <strong id="workspaceLatestStatus">待开始</strong>
+                <span id="workspaceLatestHint">提交任务后自动刷新</span>
+              </div>
+            </header>
 
-            <div class="floating-tags">
-              <button>剧本</button>
-              <button>人物</button>
-              <button>视频</button>
-            </div>
-
-            <section class="node source-node">
+            <section class="workspace-history-card result-node">
               <header>
-                <b id="queueTitle">当前任务队列</b>
-                <span id="taskCount">0 个任务</span>
-              </header>
-              <div id="taskGrid" class="task-grid"></div>
-            </section>
-
-            <section class="node result-node">
-              <header>
-                <b id="resultTitle">生成结果</b>
-                <div class="node-actions">
-                  <button id="downloadVideos" type="button">视频下载</button>
-                  <button id="downloadImages" type="button">图片下载</button>
-                  <button id="clearDone" type="button">清空</button>
+                <div>
+                  <b id="resultTitle">创作资产</b>
+                  <p class="local-history-note">参考 Airh 的资产管理方式，把状态、预览、下载和复用都直接收进卡片里。</p>
+                </div>
+                <div class="workspace-history-tools">
+                  <div class="workspace-view-toggle" role="group" aria-label="视图切换">
+                    <button type="button" class="active" data-workspace-view="grid">宫格</button>
+                    <button type="button" data-workspace-view="list">列表</button>
+                  </div>
+                  <div id="workspaceAssetTabs" class="workspace-asset-tabs" role="tablist" aria-label="资产筛选">
+                    <button type="button" class="workspace-asset-tab active" data-workspace-filter="all">全部 <span id="workspaceAssetCountAll">0</span></button>
+                    <button type="button" class="workspace-asset-tab" data-workspace-filter="video">视频 <span id="workspaceAssetCountVideo">0</span></button>
+                    <button type="button" class="workspace-asset-tab" data-workspace-filter="image">图片 <span id="workspaceAssetCountImage">0</span></button>
+                    <button type="button" class="workspace-asset-tab" data-workspace-filter="chat">聊天 <span id="workspaceAssetCountChat">0</span></button>
+                  </div>
+                  <div class="node-actions workspace-actions">
+                    <button id="downloadVideos" type="button">批量下载视频</button>
+                    <button id="downloadImages" type="button">批量下载图片</button>
+                    <button id="clearDone" type="button">清空历史</button>
+                  </div>
                 </div>
               </header>
-              <p class="local-history-note">本地测试结果会自动保留在当前浏览器</p>
+              <div class="workspace-stats" aria-label="任务统计">
+                <div class="workspace-stat-card">
+                  <strong id="workspaceStatRunning">0</strong>
+                  <span>进行中</span>
+                </div>
+                <div class="workspace-stat-card success">
+                  <strong id="workspaceStatCompleted">0</strong>
+                  <span>已完成</span>
+                </div>
+                <div class="workspace-stat-card danger">
+                  <strong id="workspaceStatFailed">0</strong>
+                  <span>失败</span>
+                </div>
+              </div>
               <div class="result-columns">
-                <section>
-                  <h3>历史视频</h3>
+                <section data-kind="video">
+                  <div class="result-section-heading">
+                    <div class="result-section-copy">
+                      <h3>最新视频资产</h3>
+                      <span>可预览 / 下载 / 继续复用</span>
+                    </div>
+                  </div>
                   <div id="videoResultGrid" class="result-grid"></div>
                 </section>
-                <section>
-                  <h3>历史图片</h3>
+                <section data-kind="image">
+                  <div class="result-section-heading">
+                    <div class="result-section-copy">
+                      <h3>最新图片资产</h3>
+                      <span>参考图与成图结果集中管理</span>
+                    </div>
+                  </div>
                   <div id="imageResultGrid" class="result-grid"></div>
                 </section>
-                <section>
-                  <h3>聊天</h3>
+                <section data-kind="chat">
+                  <div class="result-section-heading">
+                    <div class="result-section-copy">
+                      <h3>最近聊天会话</h3>
+                      <span>保留关键回答与会话摘要</span>
+                    </div>
+                  </div>
                   <div id="chatResultGrid" class="result-grid"></div>
                 </section>
               </div>
             </section>
           </div>
-
-          <div class="tool-dock">
-            <button title="主页">⌂</button>
-            <button title="文件">□</button>
-            <button title="图片">▧</button>
-          </div>
-          <div id="zoomReadout" class="zoom-readout">100%</div>
         </div>
       </section>
     </div>
@@ -344,6 +379,6 @@
     </dialog>
 
     <script src="./youmind-prompts.js?v=20260505-1"></script>
-    <script src="./script.js?v=20260505-7"></script>
+    <script src="./script.js?v=20260505-8"></script>
   </body>
 </html>

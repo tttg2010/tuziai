@@ -1,18 +1,95 @@
 const API_CONFIG_KEY = "lingyu-api-config";
 const REMOVED_MODULES_KEY = "tuzi-removed-modules";
 const SAVED_TASKS_KEY = "tuzi-saved-results";
-const SAVED_DRAGGED_ITEMS_KEY = "tuzi-dragged-items";
 const PRIMARY_API_BASE_URL = "https://api.yijiarj.cn";
 
 const fallbackModels = [
-  { name: "veo_3_1-fast", description: "视频生成 · 任务轮询 · 画布工作流", category: "video", tags: "视频", price: 0.19, ratio: 1, group: "default" },
-  { name: "veo_3_1-4K", description: "视频生成 · 4K 输出 · 画布管理", category: "video", tags: "视频", price: 1, ratio: 1, group: "default" },
-  { name: "openai-chat", description: "聊天对话 · 多轮上下文 · 流式回复", category: "chat", tags: "聊天", price: 0, ratio: 1, group: "default" },
-  { name: "gpt-5.2-codex", description: "代码助手 · 推理工具 · 多模态理解", category: "chat", tags: "聊天", price: 0, ratio: 0.875, group: "cx" },
-  { name: "nano_banana_pro", description: "香蕉 nano · 文/图生图 · 返回图片 URL", category: "image", tags: "图片", price: 0.21, ratio: 1, group: "default" },
-  { name: "nano-banana-2", description: "香蕉 2 · 多图 URL · 1K/2K/4K 输出", category: "image", tags: "图片", price: 0.21, ratio: 1, group: "default" },
-  { name: "gemini-3.1-flash-image-preview-1k", description: "Gemini 香蕉 · generateContent 图片输出", category: "image", tags: "图片", price: 0.21, ratio: 1, group: "default" },
-  { name: "vision-model", description: "图片理解 · 视觉分析 · 多模态输入", category: "image", tags: "图片", price: 0, ratio: 0.5, group: "default" }
+  {
+    name: "veo_3_1-fast",
+    description: "文生视频 / 图生视频 / 参考图 / 多图输入",
+    category: "video",
+    tags: "视频",
+    price: 0.19,
+    ratio: 1,
+    group: "default",
+    brand: "veo",
+    logoLabel: "Veo",
+    capabilities: ["文生视频", "图生视频", "多图参考"],
+    supportsWatermark: true
+  },
+  {
+    name: "veo_3_1-4K",
+    description: "4K 视频生成 / 高质量输出 / 任务轮询",
+    category: "video",
+    tags: "视频",
+    price: 1,
+    ratio: 1,
+    group: "default",
+    brand: "veo",
+    logoLabel: "Veo",
+    capabilities: ["4K", "多图参考", "任务轮询"],
+    supportsWatermark: true
+  },
+  {
+    name: "nano_banana_pro",
+    description: "文生图 / 图生图 / 多图参考 / URL 输出",
+    category: "image",
+    tags: "图片",
+    price: 0.21,
+    ratio: 1,
+    group: "default",
+    brand: "banana",
+    logoLabel: "NB",
+    capabilities: ["文生图", "图生图", "多图参考"]
+  },
+  {
+    name: "nano-banana-2",
+    description: "多图参考 / 1K-4K 输出 / 新版 Banana",
+    category: "image",
+    tags: "图片",
+    price: 0.21,
+    ratio: 1,
+    group: "default",
+    brand: "banana",
+    logoLabel: "NB2",
+    capabilities: ["多图参考", "2K/4K", "尺寸选择"]
+  },
+  {
+    name: "gemini-3.1-flash-image-preview-1k",
+    description: "Gemini 图片生成 / 多模态参考 / 快速预览",
+    category: "image",
+    tags: "图片",
+    price: 0.21,
+    ratio: 1,
+    group: "default",
+    brand: "gemini",
+    logoLabel: "Gem",
+    capabilities: ["Gemini", "图像生成", "参考图"]
+  },
+  {
+    name: "gpt-5.2-codex",
+    description: "真实 GPT 对话体验 / 代码工程 / 多轮上下文",
+    category: "chat",
+    tags: "聊天",
+    price: 0,
+    ratio: 0.875,
+    group: "cx",
+    brand: "gpt",
+    logoLabel: "GPT",
+    capabilities: ["代码工程", "多轮对话", "系统角色"]
+  },
+  {
+    name: "openai-chat",
+    description: "通用助手 / 创意写作 / 问答分析",
+    category: "chat",
+    tags: "聊天",
+    price: 0,
+    ratio: 1,
+    group: "default",
+    brand: "openai",
+    logoLabel: "AI",
+    capabilities: ["通用问答", "写作", "分析"]
+  }
 ];
 
 const featureCopy = {
@@ -22,8 +99,7 @@ const featureCopy = {
     promptLabel: "视频提示词",
     placeholder: "描述镜头、主体、动作、风格、光线和转场...",
     submit: "开始生成",
-    queue: "视频任务队列",
-    result: "视频结果"
+    result: "创作资产"
   },
   chat: {
     titlePrefix: "当前聊天模型",
@@ -31,8 +107,7 @@ const featureCopy = {
     promptLabel: "对话内容",
     placeholder: "输入你想让模型回答、改写、分析或执行的内容...",
     submit: "发送消息",
-    queue: "聊天调用记录",
-    result: "聊天结果"
+    result: "会话资产"
   },
   image: {
     titlePrefix: "当前图片模型",
@@ -40,8 +115,7 @@ const featureCopy = {
     promptLabel: "图片提示词",
     placeholder: "描述画面主体、构图、风格、材质、光线和色彩...",
     submit: "生成图片",
-    queue: "图片任务队列",
-    result: "图片结果"
+    result: "创作资产"
   }
 };
 
@@ -222,7 +296,7 @@ const systemRolePresets = [
 ];
 
 const squareTags = [
-  "全部", "图片", "视频", "系统生成", "抓取素材", "YouMind", "Nano Banana Pro", "GPT Image 2",
+  "全部", "图片", "视频", "系统生成", "抓取素材", "YouMind", "Seedance2.0", "Nano Banana Pro", "GPT Image 2",
   "波普艺术", "怪诞卡通", "节日氛围", "游戏周边", "极简美学", "机甲",
   "虚假风美学", "屏幕模拟", "趋势分析", "健康", "品牌视觉", "二次元", "校园",
   "冬泳", "疯批感", "AI工作流", "空间改造", "公式美学", "创意质感", "自然奇观",
@@ -246,19 +320,13 @@ let state = {
   count: 1,
   tasks: loadSavedTasks(),
   chatMessages: loadSavedChatMessages(),
-  selectedCanvasItem: null,
   previewItem: null,
   preview: { scale: 1, x: 0, y: 0 },
   historyVideoMuted: true,
   lastHealthResults: [],
-  inlineHealth: { status: "idle", category: null, results: [], currentModel: null, total: 0, completed: 0 },
   removedModules: loadRemovedModules(),
-  draggedItems: loadSavedDraggedItems(),
-  nodePositions: {
-    source: { x: 88, y: 72 },
-    result: { x: 88, y: 302 }
-  },
-  canvas: { x: 0, y: 0, zoom: 1 }
+  workspaceFilter: "all",
+  workspaceView: "grid"
 };
 
 const el = (id) => document.getElementById(id);
@@ -297,11 +365,6 @@ function saveTasks() {
   }
 }
 
-function loadSavedDraggedItems() {
-  const saved = localStorage.getItem(SAVED_DRAGGED_ITEMS_KEY);
-  return saved ? JSON.parse(saved) : {};
-}
-
 function loadSavedChatMessages() {
   const saved = localStorage.getItem("tuzi-chat-messages");
   return saved ? JSON.parse(saved) : [];
@@ -312,14 +375,6 @@ function saveChatMessages() {
     localStorage.setItem("tuzi-chat-messages", JSON.stringify(state.chatMessages.slice(-80)));
   } catch (error) {
     console.warn("保存聊天记录失败", error);
-  }
-}
-
-function saveDraggedItems() {
-  try {
-    localStorage.setItem(SAVED_DRAGGED_ITEMS_KEY, JSON.stringify(state.draggedItems));
-  } catch (error) {
-    console.warn("保存画布位置失败", error);
   }
 }
 
@@ -367,26 +422,31 @@ function finalPrice(model) {
 
 function normalizePricing(payload) {
   const ratios = payload.group_ratio || {};
-  const categoryOrder = { video: 0, chat: 1, image: 2 };
+  const categoryOrder = { video: 0, image: 1, chat: 2 };
   const remoteModels = (payload.data || [])
     .map((item) => {
       const group = item.enable_groups?.[0] || "default";
       const category = getModelCategory(item);
+      const fallback = fallbackModels.find((model) => model.name === item.model_name);
       return {
         name: item.model_name,
-        description: item.description || `${item.tags || "模型"} · ${group}`,
+        description: fallback?.description || item.description || `${item.tags || "模型"} · ${group}`,
         category,
-        tags: item.tags || "视频",
-        price: item.model_price || 0,
-        ratio: ratios[group] || 1,
-        group
+        tags: item.tags || fallback?.tags || (category === "video" ? "视频" : category === "image" ? "图片" : "聊天"),
+        price: item.model_price || fallback?.price || 0,
+        ratio: ratios[group] || fallback?.ratio || 1,
+        group,
+        brand: fallback?.brand || getModelBrand({ name: item.model_name }),
+        logoLabel: fallback?.logoLabel || formatModelTitle(item.model_name).slice(0, 3),
+        capabilities: fallback?.capabilities || [],
+        supportsWatermark: fallback?.supportsWatermark || false
       };
     })
-    .filter((item) => ["video", "chat", "image"].includes(item.category))
+    .filter((item) => ["video", "image", "chat"].includes(item.category))
     .filter((item) => !isSoraModel(item))
     .sort((a, b) => categoryOrder[a.category] - categoryOrder[b.category]);
   const videoModels = remoteModels.filter((item) => item.category === "video");
-  return videoModels.length >= 2 ? remoteModels : fallbackModels;
+  return videoModels.length >= 1 ? remoteModels : fallbackModels;
 }
 
 function isSoraModel(model) {
@@ -397,8 +457,8 @@ function isSoraModel(model) {
 
 function getModelCategory(item) {
   const tags = String(item.tags || "");
-  const name = String(item.model_name || "");
-  if (tags.includes("视频") || name.includes("veo") || name.includes("sora") || name.includes("video")) return "video";
+  const name = String(item.model_name || item.name || "").toLowerCase();
+  if (tags.includes("视频") || name.includes("veo") || name.includes("video") || name.includes("seedance")) return "video";
   if (tags.includes("绘图") || tags.includes("图片") || name.includes("banana") || name.includes("image") || name.includes("vision")) return "image";
   return "chat";
 }
@@ -518,49 +578,29 @@ function formatModelTitle(name) {
 }
 
 function getModelCardDescription(model) {
-  const name = String(model.name || "").toLowerCase();
   const group = model.group ? ` · ${model.group}` : "";
-  if (model.category === "video") {
-    if (name.includes("veo")) return `视频生成 · 图生/文生 · 任务轮询${group}`;
-    return `视频创作 · 结果预览 · 批量下载${group}`;
-  }
-  if (model.category === "image") {
-    if (name.includes("banana")) return `图片生成 · 多图参考 · URL 输出${group}`;
-    if (name.includes("gemini")) return `Gemini 图片 · 参考图创作${group}`;
-    return `图片理解/生成 · 多模态输入${group}`;
-  }
-  if (model.category === "chat") {
-    if (name.includes("codex")) return `代码与推理 · 长上下文 · 工程助手${group}`;
-    if (name.includes("deepseek")) return `中文推理 · 数学/代码 · 高性价比${group}`;
-    if (name.includes("grok")) return `实时问答 · 创意对话 · 快速响应${group}`;
-    if (name.includes("mini")) return `轻量对话 · 快速响应 · 低成本${group}`;
-    if (name.includes("gpt")) return `通用对话 · 推理写作 · 多场景${group}`;
-    return `聊天对话 · 多轮上下文 · 角色预设${group}`;
-  }
+  const capabilityText = Array.isArray(model.capabilities) && model.capabilities.length
+    ? model.capabilities.slice(0, 3).join(" / ")
+    : "";
+  if (capabilityText) return `${capabilityText}${group}`;
+  if (model.category === "video") return `视频生成 / 历史回放 / 批量下载${group}`;
+  if (model.category === "image") return `图片生成 / 多图参考 / 历史管理${group}`;
+  if (model.category === "chat") return `真实对话 / 系统角色 / 清晰报错${group}`;
   return `模型 · ${model.group || "default"}`;
 }
 
 function renderBrandLogo(model) {
   const brand = getModelBrand(model);
-  const labels = {
-    veo: "V3",
-    sora: "S",
-    banana: "NB",
-    gemini: "G",
-    openai: "AI",
-    gpt: "GPT",
-    vision: "VIS",
-    system: "API"
-  };
-  return `<span class="logo brand-${brand}" aria-label="${labels[brand] || "AI"} logo">
-    <span>${labels[brand] || model.name.slice(0, 1).toUpperCase()}</span>
+  const label = model.logoLabel || formatModelTitle(model.name).slice(0, 3);
+  return `<span class="logo brand-${brand}" aria-label="${escapeHtml(label)} logo">
+    <span>${escapeHtml(label)}</span>
   </span>`;
 }
 
 function getModelBrand(model) {
+  if (model.brand) return model.brand;
   const name = String(model.name || "").toLowerCase();
   if (name.includes("veo")) return "veo";
-  if (name.includes("sora")) return "sora";
   if (name.includes("banana") || name.includes("nano_banana")) return "banana";
   if (name.includes("gemini")) return "gemini";
   if (name.includes("openai")) return "openai";
@@ -582,6 +622,27 @@ function getCurrentCopy() {
   return featureCopy[state.selectedModel.category] || featureCopy.video;
 }
 
+function getWorkspaceHeadline(category) {
+  if (category === "video") return "视频创作资产栏";
+  if (category === "image") return "图片创作资产栏";
+  if (category === "chat") return "对话会话资产栏";
+  return "右侧创作资产栏";
+}
+
+function getWorkspaceDescription(category) {
+  if (category === "video") return "把视频状态、预览、下载和再次生成收进一组更轻量的资产卡里。";
+  if (category === "image") return "把参考图、成图结果和最近完成资产收进一条连续的图片创作流。";
+  if (category === "chat") return "保留最近会话、关键回答和上下文摘要，让聊天也有统一的资产侧栏。";
+  return "当前模型、任务状态和最近产出都会在这里持续更新。";
+}
+
+function getWorkspaceModelMeta(category) {
+  if (category === "video") return "视频创作流";
+  if (category === "image") return "图片创作流";
+  if (category === "chat") return `角色：${getActiveRoleName()}`;
+  return "工作台上下文";
+}
+
 function renderFeaturePanel() {
   const category = state.selectedModel.category;
   const copy = getCurrentCopy();
@@ -589,8 +650,11 @@ function renderFeaturePanel() {
   el("promptLabel").innerHTML = `${copy.promptLabel} <b>*</b>`;
   el("prompt").placeholder = copy.placeholder;
   el("submitLabel").textContent = copy.submit;
-  el("queueTitle").textContent = copy.queue;
   el("resultTitle").textContent = copy.result;
+  el("workspaceHeadline").textContent = getWorkspaceHeadline(category);
+  el("workspaceDescription").textContent = getWorkspaceDescription(category);
+  el("workspaceModelName").textContent = formatModelTitle(state.selectedModel.name);
+  el("workspaceModelMeta").textContent = getWorkspaceModelMeta(category);
   el("referenceSection").classList.toggle("hidden", category === "chat");
   el("extendSection").classList.toggle("hidden", category !== "video");
   el("videoControls").classList.toggle("hidden", category !== "video");
@@ -643,19 +707,20 @@ function renderGallery() {
   el("galleryMasonry").innerHTML = items.map((item) => `
     <article class="gallery-card ${item.sourceType === "抓取" ? "scraped" : "system"}" data-gallery-id="${escapeHtml(item.id)}" tabindex="0" role="button" aria-label="预览 ${escapeHtml(item.title)}">
       <div class="gallery-card-media">
-        ${item.type === "video" ? `<video src="${item.url}" controls muted></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
+        ${item.type === "video" ? `<video src="${item.url}" muted loop playsinline preload="metadata"></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" loading="lazy" />`}
         <span class="gallery-open-cue">点击预览</span>
       </div>
       <div class="gallery-card-body">
         <div class="gallery-card-meta">
           <span>${escapeHtml(item.modelLabel || item.model || (item.type === "video" ? "视频" : "图片"))}</span>
-          <span>${escapeHtml(item.sourceType || "系统生成")}</span>
+          <span>${escapeHtml(item.displaySourceType || item.sourceType || "系统生成")}</span>
+          <span>${escapeHtml(item.type === "video" ? "视频" : "图片")}</span>
         </div>
         <h3>${escapeHtml(item.title)}</h3>
         <p>${escapeHtml(item.author ? `作者：${item.author}` : "作者：当前用户")}</p>
         <div class="gallery-card-tags">${item.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
         <div class="gallery-card-actions">
-          <button type="button" class="gallery-use" data-gallery-prompt="${escapeHtml(item.prompt || item.title)}">使用提示词</button>
+          <button type="button" class="gallery-use" data-gallery-prompt="${escapeHtml(item.prompt || item.title)}" data-gallery-type="${escapeHtml(item.type)}">使用提示词</button>
           ${item.detailUrl ? `<a href="${escapeHtml(item.detailUrl)}" target="_blank" rel="noopener noreferrer">来源</a>` : ""}
         </div>
       </div>
@@ -687,12 +752,12 @@ function renderGalleryDetail() {
           <div class="detail-kind">${escapeHtml(item.type === "video" ? "视频提示词" : "图像提示词")}</div>
           <h1>${escapeHtml(item.title)}</h1>
           <figure class="detail-hero">
-            ${item.type === "video" ? `<video src="${item.url}" controls></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
+            ${item.type === "video" ? `<video src="${item.url}" controls playsinline poster="${escapeHtml(item.poster || "")}"></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
           </figure>
           <section class="detail-prompt-block">
             <header>
               <h2>提示词</h2>
-              <button type="button" class="gallery-use" data-gallery-prompt="${escapeHtml(prompt)}">使用提示词</button>
+              <button type="button" class="gallery-use" data-gallery-prompt="${escapeHtml(prompt)}" data-gallery-type="${escapeHtml(item.type)}">使用提示词</button>
             </header>
             <pre>${escapeHtml(prompt)}</pre>
           </section>
@@ -701,17 +766,18 @@ function renderGalleryDetail() {
           <div class="detail-author">
             <small>作者</small>
             <span>${escapeHtml(item.author || "当前用户")}</span>
-            <strong>${escapeHtml(item.sourceName || item.sourceType || "系统生成")}</strong>
+            <strong>${escapeHtml(item.sourceName || item.displaySourceType || item.sourceType || "系统生成")}</strong>
           </div>
           <dl>
             <div><dt>模型</dt><dd>${escapeHtml(item.modelLabel || item.model || "未标记")}</dd></div>
-            <div><dt>类型</dt><dd>${escapeHtml(item.sourceType || "系统生成")}</dd></div>
+            <div><dt>类型</dt><dd>${escapeHtml(item.displaySourceType || item.sourceType || "系统生成")}</dd></div>
+            <div><dt>素材形态</dt><dd>${escapeHtml(item.type === "video" ? "视频" : "图片")}</dd></div>
             <div><dt>发布时间</dt><dd>${escapeHtml(item.publishedAt || "本地生成")}</dd></div>
-            <div><dt>原始语言</dt><dd>ZH</dd></div>
+            <div><dt>原始语言</dt><dd>${escapeHtml(item.language || "ZH")}</dd></div>
           </dl>
           <div class="detail-tags">${item.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>
           <div class="detail-actions">
-            <button type="button" class="gallery-use" data-gallery-prompt="${escapeHtml(prompt)}">使用提示词</button>
+            <button type="button" class="gallery-use" data-gallery-prompt="${escapeHtml(prompt)}" data-gallery-type="${escapeHtml(item.type)}">使用提示词</button>
             ${item.detailUrl ? `<a href="${escapeHtml(item.detailUrl)}" target="_blank" rel="noopener noreferrer">查看原始来源</a>` : ""}
           </div>
         </aside>
@@ -730,11 +796,13 @@ function openGalleryPreview(itemId) {
     <div class="gallery-preview-window" role="dialog" aria-label="${escapeHtml(item.title)} 预览">
       <button type="button" class="gallery-preview-close" data-preview-close="true" aria-label="关闭预览">×</button>
       <div class="gallery-preview-media" data-preview-detail="${escapeHtml(item.id)}" title="点击进入详情页">
-        ${item.type === "video" ? `<video src="${item.url}" controls autoplay muted playsinline></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
+        ${item.type === "video" ? `<video src="${item.url}" controls autoplay muted playsinline poster="${escapeHtml(item.poster || "")}"></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" />`}
       </div>
       <div class="gallery-preview-caption">
         <strong>${escapeHtml(item.title)}</strong>
-        <span>再次点击图片进入详情页</span>
+        <span>${escapeHtml(item.modelLabel || item.model || (item.type === "video" ? "视频" : "图片"))}</span>
+        <span>${escapeHtml(item.displaySourceType || item.sourceType || "系统生成")}</span>
+        <span>再次点击素材进入详情页</span>
       </div>
     </div>
   `;
@@ -768,29 +836,38 @@ function getGalleryItems() {
 
 function getRawGalleryItems() {
   const systemItems = state.tasks
-    .filter((task) => task.url || task.imageUrl)
+    .filter((task) => getTaskVideoUrl(task) || getTaskImageUrl(task))
     .map((task) => {
-      const type = task.url ? "video" : "image";
+      const type = getTaskVideoUrl(task) ? "video" : "image";
       const tags = getGalleryTags(task, type);
       return {
-        id: task.id || `system-${task.created_at || task.url || task.imageUrl}`,
+        id: task.id || `system-${task.created_at || getTaskVideoUrl(task) || getTaskImageUrl(task)}`,
         type,
-        url: task.url || task.imageUrl,
+        url: getTaskVideoUrl(task) || getTaskImageUrl(task),
+        poster: task.poster || task.coverUrl || task.thumbnail || "",
         title: task.prompt || (type === "video" ? "未命名视频作品" : "未命名图片作品"),
         prompt: task.prompt || "",
         sourceType: "系统生成",
+        displaySourceType: "系统生成",
+        sourceName: "兔子AI 工作台",
         author: "当前用户",
         model: task.model || state.selectedModel?.name || "",
         modelLabel: formatModelTitle(task.model || state.selectedModel?.name || ""),
         tags: Array.from(new Set([...tags, "系统生成"])),
-        createdAt: task.created_at || 0
+        publishedAt: formatTimestamp(task.created_at),
+        language: "ZH",
+        createdAt: normalizeTimestamp(task.created_at)
       };
     });
   const scrapedItems = state.externalPrompts.map((item) => ({
     ...item,
-    tags: Array.from(new Set([...(Array.isArray(item.tags) ? item.tags : getGalleryTags(item, item.type || "image")), "抓取素材"])),
+    poster: item.poster || item.coverUrl || item.thumbnail || "",
+    tags: Array.from(new Set([...(Array.isArray(item.tags) ? item.tags : getGalleryTags(item, item.type || "image")), item.sourceType === "抓取" ? "抓取素材" : "系统生成"])),
     sourceType: item.sourceType || "抓取",
-    createdAt: item.createdAt || 0
+    displaySourceType: item.sourceType || (item.sourceName ? item.sourceName : "抓取素材"),
+    publishedAt: item.publishedAt || formatTimestamp(item.createdAt),
+    language: item.language || "ZH",
+    createdAt: normalizeTimestamp(item.createdAt)
   }));
   return [...systemItems, ...scrapedItems];
 }
@@ -839,7 +916,43 @@ function getGalleryTags(task, type) {
   if (model.includes("banana")) base.push("超写实");
   if (model.includes("gemini")) base.push("唯美光影");
   if (model.includes("veo")) base.push("创意海报");
+  if (model.includes("gpt") || model.includes("openai")) base.push("代码工程");
   return Array.from(new Set(base));
+}
+
+function normalizeTimestamp(value) {
+  if (!value) return 0;
+  const numeric = Number(value);
+  if (!Number.isNaN(numeric) && numeric > 0) {
+    return numeric > 1e12 ? numeric : numeric * 1000;
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function formatTimestamp(value) {
+  const timestamp = normalizeTimestamp(value);
+  if (!timestamp) return "本地生成";
+  return new Date(timestamp).toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function formatRelativeTime(value) {
+  const timestamp = normalizeTimestamp(value);
+  if (!timestamp) return "刚刚";
+  const diffMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+  if (diffMinutes < 1) return "刚刚";
+  if (diffMinutes < 60) return `${diffMinutes} 分钟前`;
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} 小时前`;
+  const diffDays = Math.round(diffHours / 24);
+  if (diffDays < 7) return `${diffDays} 天前`;
+  return formatTimestamp(timestamp);
 }
 
 function renderRoleAvatars() {
@@ -852,28 +965,133 @@ function renderRoleAvatars() {
   `).join("");
 }
 
+function getActiveRolePreset() {
+  const currentPrompt = el("systemPrompt")?.value.trim() || "";
+  return systemRolePresets.find((role) => role.prompt === currentPrompt) || systemRolePresets[0];
+}
+
+function getActiveRoleName() {
+  return getActiveRolePreset()?.name || "通用助手";
+}
+
+function getChatMessageType(message) {
+  if (String(message.role).includes("user")) return "user";
+  if (String(message.role).includes("error")) return "assistant error";
+  return "assistant";
+}
+
+function getChatMessageAvatar(message) {
+  if (String(message.role).includes("user")) return "你";
+  if (String(message.role).includes("error")) return "!";
+  return getActiveRolePreset()?.shortName || "助";
+}
+
 function renderWorkspaceForFeature() {
   const category = state.selectedModel.category;
-  el("canvasWorkspace").classList.toggle("history-card-workspace", ["video", "image"].includes(category));
+  const workspace = el("canvasWorkspace");
+  workspace.classList.toggle("history-card-workspace", ["video", "image", "chat"].includes(category));
   const resultNode = document.querySelector(".result-node");
   resultNode.classList.toggle("video-workspace", category === "video");
   resultNode.classList.toggle("image-workspace", category === "image");
   resultNode.classList.toggle("chat-workspace", category === "chat");
-  document.querySelector(".source-node").classList.toggle("chat-workspace", category === "chat");
-  document.querySelector("#videoResultGrid").closest("section").classList.toggle("hidden", category !== "video");
-  document.querySelector("#imageResultGrid").closest("section").classList.toggle("hidden", category !== "image");
-  document.querySelector("#chatResultGrid").closest("section").classList.toggle("hidden", category !== "chat");
+  syncWorkspaceFilter(category);
+  document.querySelector("#videoResultGrid").closest("section").classList.toggle("hidden", !shouldShowWorkspaceSection(category, "video"));
+  document.querySelector("#imageResultGrid").closest("section").classList.toggle("hidden", !shouldShowWorkspaceSection(category, "image"));
+  document.querySelector("#chatResultGrid").closest("section").classList.toggle("hidden", !shouldShowWorkspaceSection(category, "chat"));
   el("downloadVideos").classList.toggle("hidden", category !== "video");
   el("downloadImages").classList.toggle("hidden", category !== "image");
+  renderWorkspaceTabs(category);
   renderTasks();
 }
 
+function syncWorkspaceFilter(category) {
+  const allowed = getAllowedWorkspaceFilters(category);
+  if (!allowed.includes(state.workspaceFilter)) {
+    state.workspaceFilter = allowed[0] || "all";
+  }
+}
+
+function getAllowedWorkspaceFilters(category) {
+  if (category === "video") return ["all", "video", "image", "chat"];
+  if (category === "image") return ["all", "image", "video"];
+  return ["all", "chat"];
+}
+
+function shouldShowWorkspaceSection(category, kind) {
+  const allowed = getAllowedWorkspaceFilters(category);
+  if (!allowed.includes(kind) && kind !== "all") return false;
+  if (state.workspaceFilter === "all") return allowed.includes(kind);
+  return state.workspaceFilter === kind;
+}
+
+function renderWorkspaceTabs(category) {
+  const counts = getWorkspaceAssetCounts(category);
+  el("workspaceAssetCountAll").textContent = String(counts.all);
+  el("workspaceAssetCountVideo").textContent = String(counts.video);
+  el("workspaceAssetCountImage").textContent = String(counts.image);
+  el("workspaceAssetCountChat").textContent = String(counts.chat);
+  document.querySelectorAll(".workspace-asset-tab").forEach((button) => {
+    const filter = button.dataset.workspaceFilter;
+    const enabled = getAllowedWorkspaceFilters(category).includes(filter);
+    button.classList.toggle("active", state.workspaceFilter === filter);
+    button.classList.toggle("hidden", !enabled);
+    button.disabled = !enabled;
+  });
+}
+
+function getWorkspaceAssetCounts(category) {
+  const counts = {
+    video: state.tasks.filter((task) => (task.kind || inferTaskKind(task)) === "video").length,
+    image: state.tasks.filter((task) => (task.kind || inferTaskKind(task)) === "image").length,
+    chat: state.tasks.filter((task) => task.answer).length
+  };
+  if (category === "video") return { ...counts, all: counts.video + counts.image + counts.chat };
+  if (category === "image") return { ...counts, all: counts.image + counts.video };
+  return { ...counts, all: counts.chat };
+}
+
+function applyTaskPrompt(task) {
+  const prompt = (task.prompt || "").trim();
+  if (!prompt) return;
+  setAppMode("models");
+  const preferredCategory = task.kind || inferTaskKind(task);
+  if (preferredCategory !== "chat") {
+    const preferredModel = state.models.find((model) => model.category === preferredCategory);
+    if (preferredModel) {
+      state.selectedModel = preferredModel;
+      setActiveCategory(preferredCategory);
+      renderSelection();
+    }
+    el("prompt").value = prompt;
+    el("prompt").focus();
+    return;
+  }
+  const chatModel = state.models.find((model) => model.category === "chat");
+  if (chatModel) {
+    state.selectedModel = chatModel;
+    setActiveCategory("chat");
+    renderSelection();
+  }
+  el("prompt").value = prompt;
+  el("prompt").focus();
+}
+
+function getResultSectionHeading(kind) {
+  if (kind === "video") return { title: "最新视频资产", hint: "可预览 / 下载 / 再次使用" };
+  if (kind === "image") return { title: "最新图片资产", hint: "参考图与成图结果集中管理" };
+  return { title: "最近聊天会话", hint: "保留关键回答与会话摘要" };
+}
+
 function renderChatSurface() {
+  const roleName = getActiveRoleName();
   const messages = state.chatMessages.length
     ? state.chatMessages
-    : [{ role: "assistant", content: `你好，我是 ${state.selectedModel.name}。可以直接像 GPT 一样和我对话。` }];
+    : [{ role: "assistant", content: `你好，我是 ${formatModelTitle(state.selectedModel.name)}。当前按“${roleName}”方式与你对话。` }];
   el("chatMessages").innerHTML = messages.map((message) => `
-    <div class="chat-bubble ${message.role.replace(/\s+/g, " ")}">${escapeHtml(message.content)}</div>
+    <article class="chat-row ${getChatMessageType(message)}">
+      <span class="chat-avatar">${escapeHtml(getChatMessageAvatar(message))}</span>
+      <div class="chat-bubble ${message.role.replace(/\s+/g, " ")}">${escapeHtml(message.content)}</div>
+    </article>
   `).join("");
   el("chatMessages").scrollTop = el("chatMessages").scrollHeight;
 }
@@ -894,7 +1112,8 @@ function setActiveCategory(category) {
   });
   const visibleModels = state.models
     .filter((model) => !state.removedModules.includes(model.name))
-    .filter((model) => category === "all" || model.category === category);
+    .filter((model) => category === "all" || model.category === category)
+    .sort((a, b) => getCategoryRank(a.category) - getCategoryRank(b.category));
   if (visibleModels.length && !visibleModels.some((model) => model.name === state.selectedModel.name)) {
     state.selectedModel = visibleModels[0];
     renderSelection();
@@ -902,96 +1121,194 @@ function setActiveCategory(category) {
   renderModels();
 }
 
+function getCategoryRank(category) {
+  return { video: 0, image: 1, chat: 2 }[category] ?? 99;
+}
+
 function renderTasks() {
   saveTasks();
-  saveDraggedItems();
   if (state.activeMode === "square") renderGallery();
+  const category = state.selectedModel.category;
   const visibleTasks = getWorkspaceTasks();
-  el("taskCount").textContent = `${visibleTasks.length} 个${getWorkspaceUnit()}`;
-  const placeholders = Array.from({ length: Math.max(16, visibleTasks.length) }, (_, index) => visibleTasks[index]);
-  el("taskGrid").innerHTML = state.selectedModel.category === "chat"
-    ? renderChatSessionCards(visibleTasks)
-    : placeholders.map((task) => {
-      if (!task) return `<div class="task-tile">等待任务</div>`;
-      const status = getTaskStatus(task);
-      const floating = state.draggedItems[task.id];
-      return `<button type="button" class="task-tile draggable-data ${status.className} ${floating ? "floating-data" : ""} ${state.selectedCanvasItem === task.id ? "selected" : ""}" data-task-id="${task.id}" style="${floating ? `left:${floating.x}px;top:${floating.y}px;` : ""}">
-        <span class="task-model">${task.model || state.selectedModel.name}</span>
-        <strong>${status.label}</strong>
-        <span>${status.detail}</span>
-        <span class="progress-track"><span class="progress-fill" style="width:${status.progress}%"></span></span>
-        <span>${status.progress}%</span>
-      </button>`;
-    }).join("");
+  const latestStatus = visibleTasks[0] || null;
 
-  const videos = state.selectedModel.category === "video"
-    ? state.tasks.filter((task) => (task.kind || inferTaskKind(task)) === "video")
-    : [];
-  const images = state.selectedModel.category === "image"
-    ? state.tasks.filter((task) => (task.kind || inferTaskKind(task)) === "image")
-    : [];
-  const chats = state.selectedModel.category === "chat" ? state.tasks.filter((task) => task.answer) : [];
+  const runningCount = visibleTasks.filter((task) => {
+    const className = getTaskStatus(task).className;
+    return className === "processing" || className === "queued";
+  }).length;
+  const completedCount = visibleTasks.filter((task) => getTaskStatus(task).className === "completed").length;
+
+  el("workspaceLatestStatus").textContent = latestStatus ? getTaskStatus(latestStatus).label : "待开始";
+  el("workspaceLatestHint").textContent = latestStatus
+    ? `${getWorkspaceLatestHint(latestStatus)}${runningCount ? ` · ${runningCount} 个处理中` : completedCount ? ` · ${completedCount} 个已完成` : ""}`
+    : "提交任务后自动刷新";
+  renderWorkspaceTabs(category);
+  renderWorkspaceStats(category);
+  renderWorkspaceView();
+
+  const videos = state.tasks
+    .filter((task) => (task.kind || inferTaskKind(task)) === "video")
+    .sort((a, b) => normalizeTimestamp(b.created_at || b.createdAt) - normalizeTimestamp(a.created_at || a.createdAt));
+  const images = state.tasks
+    .filter((task) => (task.kind || inferTaskKind(task)) === "image")
+    .sort((a, b) => normalizeTimestamp(b.created_at || b.createdAt) - normalizeTimestamp(a.created_at || a.createdAt));
+  const chats = state.tasks
+    .filter((task) => task.answer)
+    .sort((a, b) => normalizeTimestamp(b.created_at || b.createdAt) - normalizeTimestamp(a.created_at || a.createdAt));
+
+  document.querySelectorAll(".result-columns section[data-kind]").forEach((section) => {
+    const kind = section.dataset.kind;
+    const heading = getResultSectionHeading(kind);
+    const title = section.querySelector("h3");
+    const hint = section.querySelector(".result-section-copy span");
+    if (title) title.textContent = heading.title;
+    if (hint) hint.textContent = heading.hint;
+    section.classList.toggle("hidden", !shouldShowWorkspaceSection(category, kind));
+  });
+
   el("videoResultGrid").innerHTML = renderMediaResults(videos, "video");
   el("imageResultGrid").innerHTML = renderMediaResults(images, "image");
   el("chatResultGrid").innerHTML = renderChatResults(chats);
-  renderNodePositions();
+}
+
+function renderWorkspaceStats(category) {
+  const allowed = getAllowedWorkspaceFilters(category);
+  const tasks = state.tasks.filter((task) => {
+    const kind = task.kind || inferTaskKind(task);
+    return allowed.includes(kind);
+  });
+  const stats = tasks.reduce((acc, task) => {
+    const className = getTaskStatus(task).className;
+    if (className === "queued" || className === "processing") acc.running += 1;
+    if (className === "completed") acc.completed += 1;
+    if (className === "error" || className === "violation") acc.failed += 1;
+    return acc;
+  }, { running: 0, completed: 0, failed: 0 });
+  el("workspaceStatRunning").textContent = String(stats.running);
+  el("workspaceStatCompleted").textContent = String(stats.completed);
+  el("workspaceStatFailed").textContent = String(stats.failed);
+}
+
+function renderWorkspaceView() {
+  document.querySelectorAll(".result-grid").forEach((grid) => {
+    grid.classList.toggle("list-view", state.workspaceView === "list");
+  });
+  document.querySelectorAll("[data-workspace-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.workspaceView === state.workspaceView);
+  });
+}
+
+function getWorkspaceLatestHint(task) {
+  const status = getTaskStatus(task);
+  const prompt = (task.prompt || "").trim();
+  return prompt
+    ? `${formatRelativeTime(task.created_at || task.createdAt)} · ${prompt.slice(0, 22)}`
+    : `${formatRelativeTime(task.created_at || task.createdAt)} · ${status.detail}`;
 }
 
 function renderChatSessionCards(items) {
   if (!items.length) {
-    return `<div class="chat-session-empty">这里会记录每一次 GPT 对话</div>`;
+    return `<article class="task-panel empty chat-panel-empty"><div class="task-panel-empty"><strong>这里会记录每一次 GPT 对话</strong><span>发送消息后，最近会话和关键回答会同步沉淀到右侧资产栏。</span></div></article>`;
   }
-  return items.slice(0, 8).map((task) => `
-    <button type="button" class="chat-session-card draggable-data ${state.selectedCanvasItem === task.id ? "selected" : ""}" data-task-id="${task.id}">
-      <strong>${escapeHtml(task.prompt || "用户消息")}</strong>
-      <span>${escapeHtml(task.answer || "等待回复")}</span>
-    </button>
-  `).join("");
+  return `
+    <article class="task-panel chat-sessions-panel">
+      <header>
+        <div>
+          <strong>最近会话</strong>
+          <span>保留关键上下文与最近回答</span>
+        </div>
+        <b>${Math.min(items.length, 8)}</b>
+      </header>
+      <div class="task-panel-list chat-session-list">
+        ${items.slice(0, 8).map((task) => `
+          <button type="button" class="chat-session-card" data-task-id="${task.id}">
+            <div class="chat-session-topline">
+              <strong>${escapeHtml(task.prompt || "用户消息")}</strong>
+              <span>${escapeHtml(formatRelativeTime(task.created_at || task.createdAt))}</span>
+            </div>
+            <span>${escapeHtml(task.answer || "等待回复")}</span>
+          </button>
+        `).join("")}
+      </div>
+    </article>
+  `;
 }
 
 function getWorkspaceTasks() {
   const category = state.selectedModel.category;
-  return state.tasks.filter((task) => (task.kind || inferTaskKind(task)) === category);
+  return state.tasks
+    .filter((task) => (task.kind || inferTaskKind(task)) === category)
+    .sort((a, b) => normalizeTimestamp(b.created_at || b.createdAt) - normalizeTimestamp(a.created_at || a.createdAt));
 }
 
 function inferTaskKind(task) {
-  if (task.url) return "video";
-  if (task.imageUrl) return "image";
+  if (getTaskVideoUrl(task)) return "video";
+  if (getTaskImageUrl(task)) return "image";
   if (task.answer) return "chat";
   if (String(task.model || "").includes("banana") || String(task.model || "").includes("image")) return "image";
   return "video";
 }
 
-function getWorkspaceUnit() {
-  const units = { video: "视频任务", image: "图片任务", chat: "聊天记录" };
-  return units[state.selectedModel.category] || "任务";
+function getTaskVideoUrl(task) {
+  return task.url || task.video_url || task.videoUrl || task.output?.url || task.output?.video_url || task.data?.url || task.data?.video_url || "";
+}
+
+function getTaskImageUrl(task) {
+  return task.imageUrl || task.image_url || task.image || task.data?.[0]?.url || task.data?.url || "";
 }
 
 function renderMediaResults(items, kind) {
   if (!items.length) {
-    if (state.selectedModel.category === "video") {
-      return `<div class="result-empty-card">暂无${kind === "video" ? "历史视频" : "历史图片"}<br>生成完成后会自动保存在这里</div>`;
-    }
-    return Array.from({ length: 4 }, () => `<div class="result-tile"><span class="empty-result">空</span></div>`).join("");
+    return `<div class="result-empty-card">暂无${kind === "video" ? "视频资产" : "图片资产"}<br>生成完成后会自动沉淀到右侧创作资产栏</div>`;
   }
-  return items.map((task) => `
-    <div class="result-tile draggable-data ${task.url ? "video-preview-tile" : ""} ${getTaskStatus(task).className} ${state.selectedCanvasItem === task.id ? "selected" : ""}" role="button" tabindex="0" data-task-id="${task.id}" data-preview-id="${task.id}">
-      ${renderResultPreview(task)}
-      ${renderResultStatus(task)}
-      ${task.url ? renderVideoMuteButton() : ""}
-      <span class="media-actions">
-        <button type="button" data-download-id="${task.id}" ${task.url || task.imageUrl ? "" : "disabled"}>下载</button>
-      </span>
-    </div>
-  `).join("");
+  return items.slice(0, 8).map((task) => {
+    const status = getTaskStatus(task);
+    const canReuse = Boolean((task.prompt || "").trim());
+    const actionLabel = kind === "video" ? "再次使用" : "复用提示词";
+    const hasMedia = Boolean(getTaskVideoUrl(task) || getTaskImageUrl(task));
+    const promptText = (task.prompt || "未填写提示词").trim() || (kind === "video" ? "未命名视频资产" : "未命名图片资产");
+    const summaryText = kind === "video"
+      ? getVideoCardSummary(task, status)
+      : status.detail;
+    return `
+      <div class="result-tile ${getTaskVideoUrl(task) ? "video-preview-tile" : ""} ${status.className}" role="button" tabindex="0" data-task-id="${task.id}" data-preview-id="${task.id}">
+        ${renderResultPreview(task)}
+        ${renderResultStatus(task)}
+        ${getTaskVideoUrl(task) ? renderVideoMuteButton() : ""}
+        <div class="result-tile-meta ${kind === "video" ? "video-card-meta" : ""}">
+          <div class="result-meta-topline">
+            <span class="result-model-badge">${escapeHtml(formatModelTitle(task.model || state.selectedModel.name))}</span>
+            <small>${escapeHtml(formatRelativeTime(task.created_at || task.createdAt))}</small>
+          </div>
+          <strong>${escapeHtml(promptText.slice(0, 56))}</strong>
+          <span>${escapeHtml(summaryText)}</span>
+          ${kind === "video" ? `<div class="result-inline-state"><span class="result-inline-status ${status.className}">${escapeHtml(status.label)}</span><span class="result-inline-progress">${status.progress}%</span></div>` : ""}
+        </div>
+        <span class="media-actions ${kind === "video" ? "video-card-actions" : ""}">
+          <button type="button" data-reuse-id="${task.id}" ${canReuse ? "" : "disabled"}>${actionLabel}</button>
+          <button type="button" data-download-id="${task.id}" ${hasMedia ? "" : "disabled"}>下载</button>
+        </span>
+      </div>
+    `;
+  }).join("");
+}
+
+function getVideoCardSummary(task, status) {
+  if (status.className === "completed") return "可预览、下载，也可以把这条提示词继续复用。";
+  if (status.className === "error" || status.className === "violation") return status.detail;
+  return `${status.detail} · 卡片会自动刷新当前进度`;
 }
 
 function renderChatResults(items) {
   if (!items.length) {
-    return Array.from({ length: 4 }, () => `<div class="result-tile chat-result-card"><span class="empty-result">空</span></div>`).join("");
+    return `<div class="result-empty-card">最近还没有沉淀聊天结果<br>发送消息后会把关键回答同步展示在这里</div>`;
   }
-  return items.map((task) => `
-    <div class="result-tile chat-result-card draggable-data ${state.selectedCanvasItem === task.id ? "selected" : ""}" role="button" tabindex="0" data-task-id="${task.id}" data-preview-id="${task.id}">
+  return items.slice(0, 8).map((task) => `
+    <div class="result-tile chat-result-card" role="button" tabindex="0" data-task-id="${task.id}" data-preview-id="${task.id}">
+      <div class="chat-result-meta">
+        <strong>${escapeHtml((task.prompt || "用户消息").slice(0, 38))}</strong>
+        <span>${escapeHtml(formatRelativeTime(task.created_at || task.createdAt))}</span>
+      </div>
       <span class="text-result">${escapeHtml(task.answer)}</span>
     </div>
   `).join("");
@@ -999,8 +1316,10 @@ function renderChatResults(items) {
 
 
 function renderResultPreview(task) {
-  if (task.url) return `<video class="history-video-preview" src="${task.url}" preload="metadata" playsinline ${state.historyVideoMuted ? "muted" : ""}></video>`;
-  if (task.imageUrl) return `<img src="${task.imageUrl}" alt="生成图片" />`;
+  const videoUrl = getTaskVideoUrl(task);
+  const imageUrl = getTaskImageUrl(task);
+  if (videoUrl) return `<video class="history-video-preview" src="${videoUrl}" preload="metadata" playsinline ${state.historyVideoMuted ? "muted" : ""}></video>`;
+  if (imageUrl) return `<img src="${imageUrl}" alt="生成图片" />`;
   if (task.answer) return `<span class="text-result">${escapeHtml(task.answer)}</span>`;
   const status = getTaskStatus(task);
   return `<span class="empty-result">${escapeHtml(status.label)}<br>${escapeHtml(status.detail)}</span>`;
@@ -1012,6 +1331,12 @@ function renderVideoMuteButton() {
 
 function renderResultStatus(task) {
   const status = getTaskStatus(task);
+  if ((task.kind || inferTaskKind(task)) === "video") {
+    return `
+      <span class="result-status result-floating-status ${status.className}">${escapeHtml(status.label)}</span>
+      <span class="result-progress inline-video-progress"><span style="width:${status.progress}%"></span></span>
+    `;
+  }
   return `
     <span class="result-status ${status.className}">${escapeHtml(status.label)}</span>
     <span class="result-progress"><span style="width:${status.progress}%"></span></span>
@@ -1031,214 +1356,45 @@ function getTaskStatus(task) {
   const rawStatus = String(task.status || "queued").toLowerCase();
   const progress = Math.max(0, Math.min(100, Number(task.progress || 0)));
   const quality = String(task.quality || "");
+  const kind = task.kind || inferTaskKind(task);
+  const hasResultUrl = kind === "video" ? Boolean(getTaskVideoUrl(task)) : kind === "image" ? Boolean(getTaskImageUrl(task)) : Boolean(task.answer);
+  const pendingDetail = task.error_detail || task.detail || "";
   if (rawStatus === "error" || task.error) {
-    return { className: "error", label: "制作失败", detail: task.error || "请重试", progress };
+    return { className: "error", label: kind === "chat" ? "回复失败" : "制作失败", detail: task.error || pendingDetail || "请重试", progress: progress || 100 };
   }
   if (quality && quality !== "standard") {
     return { className: "violation", label: "内容异常", detail: quality.slice(0, 12), progress: 100 };
   }
-  if (rawStatus === "completed") {
-    return { className: "completed", label: task.kind === "chat" ? "回复完成" : "制作完成", detail: task.url || task.answer ? "可预览查看" : "等待结果", progress: 100 };
+  if (rawStatus === "completed" || rawStatus === "succeeded" || hasResultUrl) {
+    if (!hasResultUrl) {
+      return { className: "processing", label: "等待地址", detail: "结果地址同步中", progress: 99 };
+    }
+    return { className: "completed", label: kind === "chat" ? "回复完成" : "制作完成", detail: kind === "chat" ? "已写入历史记录" : "可预览查看", progress: 100 };
   }
-  if (rawStatus === "processing" || progress > 0) {
-    return { className: "processing", label: "制作中", detail: "正在生成视频", progress: progress || 1 };
+  if (["processing", "running", "in_progress"].includes(rawStatus) || progress > 0) {
+    const detailMap = {
+      video: "正在生成视频",
+      image: "正在生成图片",
+      chat: "模型正在思考"
+    };
+    return { className: "processing", label: kind === "chat" ? "思考中" : "制作中", detail: pendingDetail || detailMap[kind] || "处理中", progress: progress || 1 };
   }
-  if (rawStatus === "queued") {
-    return { className: "queued", label: "排队中", detail: "等待开始制作", progress };
+  if (["queued", "pending", "submitted"].includes(rawStatus)) {
+    return { className: "queued", label: "排队中", detail: pendingDetail || "等待开始处理", progress };
   }
-  return { className: "processing", label: "同步中", detail: rawStatus, progress };
+  return { className: "processing", label: "同步中", detail: pendingDetail || rawStatus, progress };
 }
 
 function renderCanvasTransform() {
-  const canvas = el("gridCanvas");
-  canvas.style.setProperty("--pan-x", `${state.canvas.x}px`);
-  canvas.style.setProperty("--pan-y", `${state.canvas.y}px`);
-  canvas.style.setProperty("--zoom", state.canvas.zoom);
-  el("zoomReadout").textContent = `${Math.round(state.canvas.zoom * 100)}%`;
+  return;
 }
 
 function renderNodePositions() {
-  const sourceNode = document.querySelector(".source-node");
-  const resultNode = document.querySelector(".result-node");
-  if (sourceNode) {
-    sourceNode.style.left = `${state.nodePositions.source.x}px`;
-    sourceNode.style.top = `${state.nodePositions.source.y}px`;
-  }
-  if (resultNode) {
-    resultNode.style.left = `${state.nodePositions.result.x}px`;
-    resultNode.style.top = `${state.nodePositions.result.y}px`;
-  }
-}
-
-function zoomCanvas(nextZoom, originX, originY) {
-  const canvas = el("gridCanvas");
-  const rect = canvas.getBoundingClientRect();
-  const oldZoom = state.canvas.zoom;
-  const zoom = Math.max(0.35, Math.min(2.6, nextZoom));
-  const localX = originX - rect.left;
-  const localY = originY - rect.top;
-  const worldX = (localX - state.canvas.x) / oldZoom;
-  const worldY = (localY - state.canvas.y) / oldZoom;
-  state.canvas.x = localX - worldX * zoom;
-  state.canvas.y = localY - worldY * zoom;
-  state.canvas.zoom = zoom;
-  renderCanvasTransform();
-}
-
-function panCanvas(dx, dy) {
-  state.canvas.x += dx;
-  state.canvas.y += dy;
-  renderCanvasTransform();
+  return;
 }
 
 function bindCanvasGestures() {
-  const canvas = el("gridCanvas");
-  const pointers = new Map();
-  let lastPanPoint = null;
-  let pinchStart = null;
-  let dragTarget = null;
-
-  canvas.addEventListener("wheel", (event) => {
-    if (event.button === 1 || event.ctrlKey || event.metaKey) {
-      event.preventDefault();
-      zoomCanvas(state.canvas.zoom * Math.exp(-event.deltaY * 0.002), event.clientX, event.clientY);
-      return;
-    }
-    if (event.shiftKey) {
-      event.preventDefault();
-      panCanvas(-event.deltaY, -event.deltaX);
-    }
-  }, { passive: false });
-
-  canvas.addEventListener("pointerdown", (event) => {
-    if (event.target.closest("[data-download-id]")) return;
-    const dataItem = event.target.closest("[data-task-id]");
-    if (dataItem && event.button === 0) {
-      event.preventDefault();
-      canvas.setPointerCapture(event.pointerId);
-      state.selectedCanvasItem = dataItem.dataset.taskId;
-      const start = clientToWorld(event.clientX, event.clientY);
-      dragTarget = {
-        kind: "data",
-        id: dataItem.dataset.taskId,
-        start,
-        moved: false,
-        offset: getDataDragOffset(dataItem, start)
-      };
-      renderTasks();
-      return;
-    }
-
-    if (event.target.closest("button, video, input, textarea, select")) {
-      return;
-    }
-    const node = event.target.closest(".node");
-    if (node && event.button === 0) {
-      event.preventDefault();
-      canvas.setPointerCapture(event.pointerId);
-      document.querySelectorAll(".node").forEach((item) => item.classList.remove("selected"));
-      node.classList.add("selected");
-      const nodeKey = node.classList.contains("source-node") ? "source" : "result";
-      const start = clientToWorld(event.clientX, event.clientY);
-      dragTarget = {
-        kind: "node",
-        id: nodeKey,
-        start,
-        moved: false,
-        origin: { ...state.nodePositions[nodeKey] }
-      };
-      return;
-    }
-    canvas.setPointerCapture(event.pointerId);
-    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    const shouldPan = event.button === 1 || pointers.size >= 3;
-    if (shouldPan) {
-      event.preventDefault();
-      lastPanPoint = { x: event.clientX, y: event.clientY };
-      canvas.classList.add("panning");
-    }
-    if (pointers.size === 2) pinchStart = getPinchState(pointers);
-  });
-
-  canvas.addEventListener("pointermove", (event) => {
-    if (dragTarget) {
-      event.preventDefault();
-      const point = clientToWorld(event.clientX, event.clientY);
-      const dx = point.x - dragTarget.start.x;
-      const dy = point.y - dragTarget.start.y;
-      dragTarget.moved = dragTarget.moved || Math.abs(dx) + Math.abs(dy) > 2;
-      if (dragTarget.kind === "node") {
-        state.nodePositions[dragTarget.id] = {
-          x: dragTarget.origin.x + dx,
-          y: dragTarget.origin.y + dy
-        };
-        renderNodePositions();
-      } else {
-        state.draggedItems[dragTarget.id] = {
-          x: point.x - dragTarget.offset.x,
-          y: point.y - dragTarget.offset.y
-        };
-        saveDraggedItems();
-        renderTasks();
-      }
-      return;
-    }
-
-    if (!pointers.has(event.pointerId)) return;
-    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-
-    if (pointers.size === 2 && pinchStart) {
-      event.preventDefault();
-      const current = getPinchState(pointers);
-      zoomCanvas(pinchStart.zoom * (current.distance / pinchStart.distance), current.center.x, current.center.y);
-      return;
-    }
-
-    if ((event.buttons === 4 || pointers.size >= 3) && lastPanPoint) {
-      event.preventDefault();
-      panCanvas(event.clientX - lastPanPoint.x, event.clientY - lastPanPoint.y);
-      lastPanPoint = { x: event.clientX, y: event.clientY };
-    }
-  });
-
-  ["pointerup", "pointercancel", "pointerleave"].forEach((type) => {
-    canvas.addEventListener(type, (event) => {
-      if (dragTarget) {
-        dragTarget = null;
-        tryReleasePointer(canvas, event.pointerId);
-        return;
-      }
-      pointers.delete(event.pointerId);
-      if (pointers.size < 3 && event.buttons !== 4) {
-        lastPanPoint = null;
-        canvas.classList.remove("panning");
-      }
-      if (pointers.size !== 2) pinchStart = null;
-      if (pointers.size === 2) pinchStart = getPinchState(pointers);
-    });
-  });
-
-  canvas.addEventListener("auxclick", (event) => {
-    if (event.button === 1) event.preventDefault();
-  });
-}
-
-function clientToWorld(clientX, clientY) {
-  const rect = el("gridCanvas").getBoundingClientRect();
-  return {
-    x: (clientX - rect.left - state.canvas.x) / state.canvas.zoom,
-    y: (clientY - rect.top - state.canvas.y) / state.canvas.zoom
-  };
-}
-
-function getDataDragOffset(dataItem, start) {
-  const existing = state.draggedItems[dataItem.dataset.taskId];
-  if (existing) return { x: start.x - existing.x, y: start.y - existing.y };
-  const rect = dataItem.getBoundingClientRect();
-  const canvasRect = el("gridCanvas").getBoundingClientRect();
-  const x = (rect.left - canvasRect.left - state.canvas.x) / state.canvas.zoom;
-  const y = (rect.top - canvasRect.top - state.canvas.y) / state.canvas.zoom;
-  return { x: start.x - x, y: start.y - y };
+  return;
 }
 
 function tryReleasePointer(target, pointerId) {
@@ -1247,19 +1403,6 @@ function tryReleasePointer(target, pointerId) {
   } catch (_) {
     // The pointer may already be released by the browser.
   }
-}
-
-function getPinchState(pointers) {
-  const points = Array.from(pointers.values()).slice(0, 2);
-  const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1;
-  return {
-    distance,
-    zoom: state.canvas.zoom,
-    center: {
-      x: (points[0].x + points[1].x) / 2,
-      y: (points[0].y + points[1].y) / 2
-    }
-  };
 }
 
 function markTaskError(taskId, message) {
@@ -1276,18 +1419,13 @@ function createLocalPendingTask() {
     status: "queued",
     progress: 0,
     prompt: el("prompt").value.trim(),
-    created_at: Math.floor(Date.now() / 1000)
+    created_at: Date.now()
   };
 }
 
 function replaceTaskId(localId, remoteTask) {
   state.tasks = state.tasks.map((task) => task.id === localId ? { ...task, ...remoteTask, id: remoteTask.id || localId } : task);
-  if (state.draggedItems[localId] && remoteTask.id) {
-    state.draggedItems[remoteTask.id] = state.draggedItems[localId];
-    delete state.draggedItems[localId];
-  }
   saveTasks();
-  saveDraggedItems();
   renderTasks();
   return remoteTask.id || localId;
 }
@@ -1397,7 +1535,8 @@ async function createFeatureTask() {
         progress: 100,
         kind: "chat",
         prompt: userContent,
-        answer
+        answer,
+        created_at: Date.now()
       };
     } catch (error) {
       state.chatMessages = state.chatMessages.filter((message) => message.role !== "assistant pending");
@@ -1413,7 +1552,8 @@ async function createFeatureTask() {
         kind: "chat",
         prompt: userContent,
         answer: error.message,
-        error: error.message
+        error: error.message,
+        created_at: Date.now()
       };
     }
   }
@@ -1462,7 +1602,8 @@ function getModelsForInlineHealthCheck() {
   return state.models
     .filter((model) => !isSoraModel(model))
     .filter((model) => !state.removedModules.includes(model.name))
-    .filter((model) => state.activeCategory === "all" || model.category === state.activeCategory);
+    .filter((model) => state.activeCategory === "all" || model.category === state.activeCategory)
+    .sort((a, b) => getCategoryRank(a.category) - getCategoryRank(b.category));
 }
 
 function getModelsForHealthCheck(selected) {
@@ -1686,7 +1827,8 @@ function normalizeImageResponse(payload, model) {
     progress: 100,
     kind: "image",
     imageUrl,
-    answer: imageUrl ? "" : JSON.stringify(payload)
+    answer: imageUrl ? "" : JSON.stringify(payload),
+    created_at: Date.now()
   };
 }
 
@@ -1696,14 +1838,40 @@ async function pollTask(taskId) {
       const response = await apiFetch(`/v1/videos/${taskId}`, { headers: { "Content-Type": "application/json" } });
       if (!response.ok) throw new Error(await buildApiErrorMessage(response, "视频查询"));
       const payload = await response.json();
-      state.tasks = state.tasks.map((task) => task.id === taskId ? { ...task, ...payload } : task);
+      const normalized = normalizeVideoTaskPayload(payload);
+      state.tasks = state.tasks.map((task) => task.id === taskId ? { ...task, ...normalized } : task);
       renderTasks();
-      if (!["completed", "error"].includes(String(payload.status || "").toLowerCase())) setTimeout(tick, 4500);
+      if (!["completed", "succeeded", "error", "failed"].includes(String(normalized.status || "").toLowerCase())) setTimeout(tick, 4500);
     } catch (error) {
       markTaskError(taskId, error.message);
     }
   };
   setTimeout(tick, 1800);
+}
+
+function normalizeVideoTaskPayload(payload) {
+  const url = payload.url || payload.video_url || payload.videoUrl || payload.output?.url || payload.output?.video_url || payload.data?.url || payload.data?.video_url || "";
+  const poster = payload.poster || payload.cover_url || payload.coverUrl || payload.thumbnail || payload.output?.cover_url || payload.output?.thumbnail || "";
+  const rawStatus = String(payload.status || payload.state || "").toLowerCase();
+  const status = ["completed", "succeeded"].includes(rawStatus) || url
+    ? "completed"
+    : ["failed", "error"].includes(rawStatus)
+      ? "error"
+      : ["queued", "pending", "submitted"].includes(rawStatus)
+        ? "queued"
+        : "processing";
+  const progress = Number(payload.progress ?? payload.metadata?.progress ?? (status === "completed" ? 100 : status === "queued" ? 0 : 55)) || 0;
+  return {
+    ...payload,
+    kind: "video",
+    status,
+    progress,
+    url,
+    poster,
+    error: payload.error || payload.error_message || payload.message || "",
+    error_detail: payload.detail || payload.status_text || "",
+    created_at: payload.created_at || payload.createdAt || Date.now()
+  };
 }
 
 function bindEvents() {
@@ -1737,7 +1905,7 @@ function bindEvents() {
   el("galleryMasonry").addEventListener("click", (event) => {
     const useButton = event.target.closest(".gallery-use");
     if (useButton) {
-      useGalleryPrompt(useButton.dataset.galleryPrompt || "");
+      useGalleryPrompt(useButton.dataset.galleryPrompt || "", useButton.dataset.galleryType || "image");
       return;
     }
     if (event.target.closest("a")) return;
@@ -1771,16 +1939,16 @@ function bindEvents() {
     }
     const useButton = event.target.closest(".gallery-use");
     if (!useButton) return;
-    useGalleryPrompt(useButton.dataset.galleryPrompt || "");
+    useGalleryPrompt(useButton.dataset.galleryPrompt || "", useButton.dataset.galleryType || "image");
   });
-  function useGalleryPrompt(prompt) {
+  function useGalleryPrompt(prompt, kind = "image") {
     setAppMode("models");
-    const imageModel = state.models.find((model) => model.category === "image" && /banana|image|gemini/i.test(model.name)) || state.models.find((model) => model.category === "image");
-    if (imageModel) {
-      state.selectedModel = imageModel;
-      state.activeCategory = "image";
-      document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.category === "image"));
-      renderModels();
+    const preferredCategory = kind === "video" ? "video" : "image";
+    const preferredModel = state.models.find((model) => model.category === preferredCategory)
+      || state.models.find((model) => model.category === "image");
+    if (preferredModel) {
+      state.selectedModel = preferredModel;
+      setActiveCategory(preferredCategory);
       renderSelection();
     }
     el("prompt").value = prompt;
@@ -1913,6 +2081,19 @@ function bindEvents() {
     renderTasks();
   });
 
+  el("workspaceAssetTabs").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-workspace-filter]");
+    if (!button || button.disabled) return;
+    state.workspaceFilter = button.dataset.workspaceFilter;
+    renderTasks();
+  });
+  document.querySelector(".workspace-view-toggle").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-workspace-view]");
+    if (!button) return;
+    state.workspaceView = button.dataset.workspaceView;
+    renderTasks();
+  });
+
   el("downloadVideos").addEventListener("click", () => batchDownload("video"));
   el("downloadImages").addEventListener("click", () => batchDownload("image"));
   el("previewDownload").addEventListener("click", () => {
@@ -2034,6 +2215,13 @@ function handleResultClick(event) {
     event.stopPropagation();
     state.historyVideoMuted = !state.historyVideoMuted;
     renderTasks();
+    return;
+  }
+  const reuseButton = event.target.closest("[data-reuse-id]");
+  if (reuseButton) {
+    event.stopPropagation();
+    const task = state.tasks.find((item) => item.id === reuseButton.dataset.reuseId);
+    if (task) applyTaskPrompt(task);
     return;
   }
   const downloadButton = event.target.closest("[data-download-id]");
