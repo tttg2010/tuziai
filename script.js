@@ -296,7 +296,7 @@ const systemRolePresets = [
 ];
 
 const squareTags = [
-  "全部", "图片", "视频", "系统生成", "抓取素材", "YouMind", "Seedance2.0", "Nano Banana Pro", "GPT Image 2",
+  "全部", "图片", "视频", "系统生成", "来自网络", "YouMind", "Seedance2.0", "Nano Banana Pro", "GPT Image 2",
   "波普艺术", "怪诞卡通", "节日氛围", "游戏周边", "极简美学", "机甲",
   "虚假风美学", "屏幕模拟", "趋势分析", "健康", "品牌视觉", "二次元", "校园",
   "冬泳", "疯批感", "AI工作流", "空间改造", "公式美学", "创意质感", "自然奇观",
@@ -623,17 +623,11 @@ function getCurrentCopy() {
 }
 
 function getWorkspaceHeadline(category) {
-  if (category === "video") return "视频创作资产栏";
-  if (category === "image") return "图片创作资产栏";
-  if (category === "chat") return "对话会话资产栏";
-  return "右侧创作资产栏";
+  return "任务与结果";
 }
 
 function getWorkspaceDescription(category) {
-  if (category === "video") return "把视频状态、预览、下载和再次生成收进一组更轻量的资产卡里。";
-  if (category === "image") return "把参考图、成图结果和最近完成资产收进一条连续的图片创作流。";
-  if (category === "chat") return "保留最近会话、关键回答和上下文摘要，让聊天也有统一的资产侧栏。";
-  return "当前模型、任务状态和最近产出都会在这里持续更新。";
+  return "0 进行中 · 0 已完成";
 }
 
 function getWorkspaceModelMeta(category) {
@@ -670,6 +664,12 @@ function renderFeaturePanel() {
 
 function setAppMode(mode) {
   state.activeMode = mode;
+  if (mode === "square" && location.hash !== "#square") {
+    history.replaceState(null, "", "#square");
+  }
+  if (mode === "models" && location.hash === "#square") {
+    history.replaceState(null, "", location.pathname + location.search);
+  }
   document.querySelectorAll(".mode").forEach((button) => {
     button.classList.toggle("active", button.dataset.mode === mode);
   });
@@ -679,6 +679,12 @@ function setAppMode(mode) {
   el("galleryPanel").classList.toggle("hidden", mode !== "square");
   renderSquareFilters();
   renderGallery();
+}
+
+function applyInitialRoute() {
+  if (location.hash === "#square") {
+    setAppMode("square");
+  }
 }
 
 function renderSquareFilters() {
@@ -707,7 +713,7 @@ function renderGallery() {
   el("galleryMasonry").innerHTML = items.map((item) => `
     <article class="gallery-card ${item.sourceType === "抓取" ? "scraped" : "system"}" data-gallery-id="${escapeHtml(item.id)}" tabindex="0" role="button" aria-label="预览 ${escapeHtml(item.title)}">
       <div class="gallery-card-media">
-        ${item.type === "video" ? `<video src="${item.url}" muted loop playsinline preload="metadata"></video>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" loading="lazy" />`}
+        ${item.type === "video" ? `<video src="${item.url}" muted loop playsinline preload="metadata" poster="${escapeHtml(item.poster || "")}"></video><span class="gallery-video-badge">悬停预览</span>` : `<img src="${item.url}" alt="${escapeHtml(item.title)}" loading="lazy" />`}
         <span class="gallery-open-cue">点击预览</span>
       </div>
       <div class="gallery-card-body">
@@ -862,9 +868,9 @@ function getRawGalleryItems() {
   const scrapedItems = state.externalPrompts.map((item) => ({
     ...item,
     poster: item.poster || item.coverUrl || item.thumbnail || "",
-    tags: Array.from(new Set([...(Array.isArray(item.tags) ? item.tags : getGalleryTags(item, item.type || "image")), item.sourceType === "抓取" ? "抓取素材" : "系统生成"])),
+    tags: Array.from(new Set([...(Array.isArray(item.tags) ? item.tags.map((tag) => tag === "抓取素材" ? "来自网络" : tag) : getGalleryTags(item, item.type || "image")), item.sourceType === "抓取" ? "来自网络" : "系统生成"])),
     sourceType: item.sourceType || "抓取",
-    displaySourceType: item.sourceType || (item.sourceName ? item.sourceName : "抓取素材"),
+    displaySourceType: item.sourceType || (item.sourceName ? item.sourceName : "来自网络"),
     publishedAt: item.publishedAt || formatTimestamp(item.createdAt),
     language: item.language || "ZH",
     createdAt: normalizeTimestamp(item.createdAt)
@@ -1006,14 +1012,22 @@ function renderWorkspaceForFeature() {
 
 function syncWorkspaceFilter(category) {
   const allowed = getAllowedWorkspaceFilters(category);
+  if (category === "video") {
+    state.workspaceFilter = "video";
+    return;
+  }
+  if (category === "image") {
+    state.workspaceFilter = "image";
+    return;
+  }
   if (!allowed.includes(state.workspaceFilter)) {
     state.workspaceFilter = allowed[0] || "all";
   }
 }
 
 function getAllowedWorkspaceFilters(category) {
-  if (category === "video") return ["all", "video", "image", "chat"];
-  if (category === "image") return ["all", "image", "video"];
+  if (category === "video") return ["video"];
+  if (category === "image") return ["image"];
   return ["all", "chat"];
 }
 
@@ -1137,7 +1151,13 @@ function renderTasks() {
     return className === "processing" || className === "queued";
   }).length;
   const completedCount = visibleTasks.filter((task) => getTaskStatus(task).className === "completed").length;
+  const failedCount = visibleTasks.filter((task) => {
+    const className = getTaskStatus(task).className;
+    return className === "error" || className === "violation";
+  }).length;
 
+  el("workspaceHeadline").textContent = "任务与结果";
+  el("workspaceDescription").textContent = `${runningCount} 进行中 · ${completedCount} 已完成${failedCount ? ` · ${failedCount} 失败` : ""}`;
   el("workspaceLatestStatus").textContent = latestStatus ? getTaskStatus(latestStatus).label : "待开始";
   el("workspaceLatestHint").textContent = latestStatus
     ? `${getWorkspaceLatestHint(latestStatus)}${runningCount ? ` · ${runningCount} 个处理中` : completedCount ? ` · ${completedCount} 个已完成` : ""}`
@@ -1169,6 +1189,7 @@ function renderTasks() {
   el("videoResultGrid").innerHTML = renderMediaResults(videos, "video");
   el("imageResultGrid").innerHTML = renderMediaResults(images, "image");
   el("chatResultGrid").innerHTML = renderChatResults(chats);
+  prepareHistoryVideoPreviews();
 }
 
 function renderWorkspaceStats(category) {
@@ -1203,7 +1224,7 @@ function getWorkspaceLatestHint(task) {
   const prompt = (task.prompt || "").trim();
   return prompt
     ? `${formatRelativeTime(task.created_at || task.createdAt)} · ${prompt.slice(0, 22)}`
-    : `${formatRelativeTime(task.created_at || task.createdAt)} · ${status.detail}`;
+    : `${formatRelativeTime(task.created_at || task.createdAt)} · ${toDisplayText(status.detail)}`;
 }
 
 function renderChatSessionCards(items) {
@@ -1259,7 +1280,19 @@ function getTaskImageUrl(task) {
 
 function renderMediaResults(items, kind) {
   if (!items.length) {
-    return `<div class="result-empty-card">暂无${kind === "video" ? "视频资产" : "图片资产"}<br>生成完成后会自动沉淀到右侧创作资产栏</div>`;
+    const label = kind === "video" ? "视频" : "图片";
+    const hints = kind === "video"
+      ? ["等待提交任务", "生成中会显示进度", "完成后展示预览", "失败任务可重试"]
+      : ["等待生成图片", "完成后展示成图", "支持点击预览", "可批量下载"];
+    return hints.map((hint, index) => `
+      <div class="result-empty-card task-empty-card">
+        <span class="empty-status ${index === 0 ? "queued" : ""}">${index === 0 ? "待开始" : "空"}</span>
+        <div class="empty-preview-mark"></div>
+        <strong>${label}任务位 ${index + 1}</strong>
+        <p>${hint}</p>
+        <i></i>
+      </div>
+    `).join("");
   }
   return items.slice(0, 8).map((task) => {
     const status = getTaskStatus(task);
@@ -1269,9 +1302,14 @@ function renderMediaResults(items, kind) {
     const promptText = (task.prompt || "未填写提示词").trim() || (kind === "video" ? "未命名视频资产" : "未命名图片资产");
     const summaryText = kind === "video"
       ? getVideoCardSummary(task, status)
-      : status.detail;
+      : toDisplayText(status.detail);
+    const canPreview = Boolean(getTaskVideoUrl(task) || getTaskImageUrl(task) || task.answer);
+    const actionButtons = [
+      canReuse ? `<button type="button" data-reuse-id="${task.id}">${actionLabel}</button>` : "",
+      hasMedia ? `<button type="button" data-download-id="${task.id}">下载</button>` : ""
+    ].filter(Boolean).join("");
     return `
-      <div class="result-tile ${getTaskVideoUrl(task) ? "video-preview-tile" : ""} ${status.className}" role="button" tabindex="0" data-task-id="${task.id}" data-preview-id="${task.id}">
+      <div class="result-tile ${getTaskVideoUrl(task) ? "video-preview-tile" : ""} ${status.className}" role="button" tabindex="0" data-task-id="${task.id}" ${canPreview ? `data-preview-id="${task.id}"` : ""}>
         ${renderResultPreview(task)}
         ${renderResultStatus(task)}
         ${getTaskVideoUrl(task) ? renderVideoMuteButton() : ""}
@@ -1284,10 +1322,7 @@ function renderMediaResults(items, kind) {
           <span>${escapeHtml(summaryText)}</span>
           ${kind === "video" ? `<div class="result-inline-state"><span class="result-inline-status ${status.className}">${escapeHtml(status.label)}</span><span class="result-inline-progress">${status.progress}%</span></div>` : ""}
         </div>
-        <span class="media-actions ${kind === "video" ? "video-card-actions" : ""}">
-          <button type="button" data-reuse-id="${task.id}" ${canReuse ? "" : "disabled"}>${actionLabel}</button>
-          <button type="button" data-download-id="${task.id}" ${hasMedia ? "" : "disabled"}>下载</button>
-        </span>
+        ${actionButtons ? `<span class="media-actions ${kind === "video" ? "video-card-actions" : ""}">${actionButtons}</span>` : ""}
       </div>
     `;
   }).join("");
@@ -1295,8 +1330,9 @@ function renderMediaResults(items, kind) {
 
 function getVideoCardSummary(task, status) {
   if (status.className === "completed") return "可预览、下载，也可以把这条提示词继续复用。";
-  if (status.className === "error" || status.className === "violation") return status.detail;
-  return `${status.detail} · 卡片会自动刷新当前进度`;
+  const detail = toDisplayText(status.detail);
+  if (status.className === "error" || status.className === "violation") return detail.slice(0, 68);
+  return `${detail} · 卡片会自动刷新当前进度`;
 }
 
 function renderChatResults(items) {
@@ -1318,7 +1354,7 @@ function renderChatResults(items) {
 function renderResultPreview(task) {
   const videoUrl = getTaskVideoUrl(task);
   const imageUrl = getTaskImageUrl(task);
-  if (videoUrl) return `<video class="history-video-preview" src="${videoUrl}" preload="metadata" playsinline ${state.historyVideoMuted ? "muted" : ""}></video>`;
+  if (videoUrl) return `<video class="history-video-preview" src="${videoUrl}" preload="metadata" playsinline poster="${escapeHtml(task.poster || task.coverUrl || task.thumbnail || "")}" ${state.historyVideoMuted ? "muted" : ""}></video>`;
   if (imageUrl) return `<img src="${imageUrl}" alt="生成图片" />`;
   if (task.answer) return `<span class="text-result">${escapeHtml(task.answer)}</span>`;
   const status = getTaskStatus(task);
@@ -1327,6 +1363,29 @@ function renderResultPreview(task) {
 
 function renderVideoMuteButton() {
   return `<button class="video-mute-toggle" type="button" data-toggle-video-muted aria-label="${state.historyVideoMuted ? "取消静音" : "静音"}">${state.historyVideoMuted ? "静音" : "有声"}</button>`;
+}
+
+function prepareHistoryVideoPreviews() {
+  document.querySelectorAll("video.history-video-preview").forEach((video) => {
+    video.preload = "metadata";
+    video.muted = state.historyVideoMuted;
+    if (video.getAttribute("poster")) return;
+    const showFirstFrame = () => {
+      try {
+        if (Number.isFinite(video.duration) && video.duration > 0 && video.currentTime < 0.05) {
+          video.currentTime = Math.min(0.08, video.duration / 10);
+        }
+      } catch {
+        // Remote videos may disallow seeking until metadata is fully ready.
+      }
+      video.pause();
+    };
+    if (video.readyState >= 1) {
+      showFirstFrame();
+    } else {
+      video.addEventListener("loadedmetadata", showFirstFrame, { once: true });
+    }
+  });
 }
 
 function renderResultStatus(task) {
@@ -1352,13 +1411,24 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function toDisplayText(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  try {
+    return value.message || value.error || JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 function getTaskStatus(task) {
   const rawStatus = String(task.status || "queued").toLowerCase();
   const progress = Math.max(0, Math.min(100, Number(task.progress || 0)));
   const quality = String(task.quality || "");
   const kind = task.kind || inferTaskKind(task);
   const hasResultUrl = kind === "video" ? Boolean(getTaskVideoUrl(task)) : kind === "image" ? Boolean(getTaskImageUrl(task)) : Boolean(task.answer);
-  const pendingDetail = task.error_detail || task.detail || "";
+  const pendingDetail = toDisplayText(task.error_detail || task.detail || "");
   if (rawStatus === "error" || task.error) {
     return { className: "error", label: kind === "chat" ? "回复失败" : "制作失败", detail: task.error || pendingDetail || "请重试", progress: progress || 100 };
   }
@@ -1878,6 +1948,11 @@ function bindEvents() {
   document.querySelectorAll(".mode[data-mode]").forEach((button) => {
     button.addEventListener("click", () => setAppMode(button.dataset.mode));
   });
+  el("publicSquareLink").addEventListener("click", (event) => {
+    event.preventDefault();
+    setAppMode("square");
+  });
+  window.addEventListener("hashchange", applyInitialRoute);
   el("squareTagList").addEventListener("click", (event) => {
     const tagButton = event.target.closest("[data-square-tag]");
     if (!tagButton) return;
@@ -1913,6 +1988,8 @@ function bindEvents() {
     if (!card) return;
     openGalleryPreview(card.dataset.galleryId);
   });
+  el("galleryMasonry").addEventListener("pointerover", handleGalleryVideoHover);
+  el("galleryMasonry").addEventListener("pointerout", handleGalleryVideoLeave);
   el("galleryMasonry").addEventListener("keydown", (event) => {
     if (!["Enter", " "].includes(event.key)) return;
     const card = event.target.closest("[data-gallery-id]");
@@ -2134,6 +2211,30 @@ function bindEvents() {
   });
 }
 
+function handleGalleryVideoHover(event) {
+  const card = event.target.closest(".gallery-card");
+  if (!card || !event.currentTarget.contains(card)) return;
+  if (event.relatedTarget && card.contains(event.relatedTarget)) return;
+  const video = card.querySelector(".gallery-card-media video");
+  if (!video) return;
+  video.muted = true;
+  video.play().catch(() => {});
+}
+
+function handleGalleryVideoLeave(event) {
+  const card = event.target.closest(".gallery-card");
+  if (!card || !event.currentTarget.contains(card)) return;
+  if (event.relatedTarget && card.contains(event.relatedTarget)) return;
+  const video = card.querySelector(".gallery-card-media video");
+  if (!video) return;
+  video.pause();
+  try {
+    video.currentTime = 0;
+  } catch {
+    // Some remote videos do not allow seeking before metadata is ready.
+  }
+}
+
 function renderHealthDialog(results) {
   state.lastHealthResults = results;
   const remainingFailed = getRemainingFailedModuleNames(results);
@@ -2234,7 +2335,12 @@ function handleResultClick(event) {
   const tile = event.target.closest("[data-preview-id]");
   if (!tile) return;
   const task = state.tasks.find((item) => item.id === tile.dataset.previewId);
-  if (task) openPreview(task);
+  if (!task || !canOpenTaskPreview(task)) return;
+  openPreview(task);
+}
+
+function canOpenTaskPreview(task) {
+  return Boolean(getTaskVideoUrl(task) || getTaskImageUrl(task) || task.answer);
 }
 
 function handleHistoryVideoHover(event) {
@@ -2262,18 +2368,21 @@ function handleHistoryVideoLeave(event) {
 }
 
 function openPreview(task) {
-  state.previewItem = task;
+  if (!canOpenTaskPreview(task)) return;
+  const videoUrl = getTaskVideoUrl(task);
+  const imageUrl = getTaskImageUrl(task);
+  state.previewItem = { ...task, url: videoUrl, imageUrl };
   resetPreviewZoom();
-  el("previewTitle").textContent = task.url ? "视频预览" : task.imageUrl ? "图片预览" : "聊天预览";
-  el("previewBody").innerHTML = task.url
-    ? `<video src="${task.url}" controls autoplay></video>`
-    : task.imageUrl
-      ? `<img class="zoomable-preview" src="${task.imageUrl}" alt="生成图片" />`
+  el("previewTitle").textContent = videoUrl ? "视频预览" : imageUrl ? "图片预览" : "聊天预览";
+  el("previewBody").innerHTML = videoUrl
+    ? `<video src="${videoUrl}" controls autoplay ${state.historyVideoMuted ? "muted" : ""}></video>`
+    : imageUrl
+      ? `<img class="zoomable-preview" src="${imageUrl}" alt="生成图片" />`
       : `<article class="preview-text">${escapeHtml(task.answer || "")}</article>`;
   document.querySelectorAll("#previewZoomIn, #previewZoomOut, #previewZoomReset").forEach((button) => {
-    button.classList.toggle("hidden", !task.imageUrl);
+    button.classList.toggle("hidden", !imageUrl);
   });
-  el("previewDownload").classList.toggle("hidden", !task.url && !task.imageUrl);
+  el("previewDownload").classList.toggle("hidden", !videoUrl && !imageUrl);
   el("previewDialog").showModal();
 }
 
@@ -2381,3 +2490,4 @@ renderTasks();
 renderCanvasTransform();
 renderNodePositions();
 renderSquareFilters();
+applyInitialRoute();

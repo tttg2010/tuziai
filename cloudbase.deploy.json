@@ -6,6 +6,7 @@
     "files": [
       "index.html",
       "styles.css",
+      "ui-polish.css",
       "script.js",
       "youmind-prompts.js",
       "tuzi-ai-logo.png",
